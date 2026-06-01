@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+.idea/
+*.swp
+
+# Claude Code local config (may contain machine-specific settings)
+.claude/
+
+# Node / tooling
+node_modules/
+*.log
+
+# Local env / secrets — never commit
+.dev.vars
+.env
+.env.*

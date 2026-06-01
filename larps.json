@@ -1,0 +1,93 @@
+{
+  "_note": "WCZESNA WERSJA. Tagi i triggery częściowo zgadywane z tytułów/autorów/formatu — do potwierdzenia z MG. Podział na sloty wg arkusza organizatorów.",
+  "preferenceTags": [
+    { "id": "scifi", "label": "Science fiction" },
+    { "id": "fantasy", "label": "Fantasy" },
+    { "id": "historia", "label": "Klimat historyczny / retro" },
+    { "id": "wspolczesnosc", "label": "Czasy współczesne" },
+    { "id": "groza", "label": "Groza / horror" },
+    { "id": "humor", "label": "Humor" },
+    { "id": "emocje", "label": "Silne emocje / dramat" },
+    { "id": "napiecie", "label": "Napięcie / akcja" },
+    { "id": "romans", "label": "Wątki romantyczne" },
+    { "id": "refleksja", "label": "Refleksja / filozofia" },
+    { "id": "polityka", "label": "Polityka / intryga" },
+    { "id": "walka", "label": "Konflikt / walka" },
+    { "id": "relacje", "label": "Relacje i więzi" },
+    { "id": "tajemnica", "label": "Tajemnica / śledztwo" },
+    { "id": "rytual", "label": "Rytuał / duchowość / folklor" },
+    { "id": "cialo", "label": "Ekspresja ciałem / larp bez słów" }
+  ],
+  "triggers": [
+    "Przemoc i brutalność",
+    "Śmierć i umieranie",
+    "Wojna",
+    "Krew i obrażenia ciała",
+    "Narkotyki i używki",
+    "Alkohol",
+    "Treści seksualne / zmysłowość",
+    "Bliski kontakt fizyczny",
+    "Wątki religijne / kult",
+    "Zdrowie psychiczne",
+    "Żałoba i strata bliskich",
+    "Dyskryminacja i wykluczenie",
+    "Izolacja i osamotnienie",
+    "Klaustrofobia",
+    "Ciemność",
+    "Lęk egzystencjalny / koniec świata"
+  ],
+  "timeslots": [
+    {
+      "id": "pt_wieczor",
+      "name": "Piątek wieczór",
+      "time": "18:00–22:00 (4h)",
+      "larps": [
+        { "name": "La Candela", "players": 20, "tags": ["rytual", "emocje", "cialo"], "triggers": ["Bliski kontakt fizyczny"] },
+        { "name": "Ławnicy", "players": 10, "tags": ["wspolczesnosc", "napiecie", "emocje"], "triggers": ["Przemoc i brutalność", "Dyskryminacja i wykluczenie"] },
+        { "name": "Goodnight Miami", "players": 5, "tags": ["wspolczesnosc", "napiecie", "emocje"], "triggers": ["Przemoc i brutalność", "Narkotyki i używki"] }
+      ]
+    },
+    {
+      "id": "sb_rano",
+      "name": "Sobota rano",
+      "time": "10:00–15:00 (5h)",
+      "larps": [
+        { "name": "Better Love Story than Twilight", "players": 12, "tags": ["romans", "humor", "relacje"], "triggers": ["Treści seksualne / zmysłowość"] },
+        { "name": "(A)Gnosis", "players": 15, "tags": ["scifi", "refleksja", "cialo"], "triggers": ["Izolacja i osamotnienie", "Lęk egzystencjalny / koniec świata"] },
+        { "name": "Nie Nasza Wojna", "players": 12, "tags": ["walka", "emocje", "polityka"], "triggers": ["Wojna", "Śmierć i umieranie", "Żałoba i strata bliskich"] },
+        { "name": "Hipisi, pigułki i przytulanie", "players": 11, "tags": ["historia", "relacje", "romans"], "triggers": ["Narkotyki i używki", "Treści seksualne / zmysłowość", "Bliski kontakt fizyczny"] },
+        { "name": "Kult Bachusa i Astarte", "players": 6, "tags": ["rytual", "emocje", "historia"], "triggers": ["Wątki religijne / kult", "Treści seksualne / zmysłowość", "Bliski kontakt fizyczny"] },
+        { "name": "Rękawiczki", "players": 5, "tags": ["tajemnica", "relacje", "emocje"], "triggers": ["Zdrowie psychiczne"] },
+        { "name": "Avatar: Rozdroża", "players": 12, "tags": ["fantasy", "relacje", "emocje"], "triggers": ["Przemoc i brutalność", "Śmierć i umieranie"] }
+      ]
+    },
+    {
+      "id": "sb_wieczor",
+      "name": "Sobota wieczór",
+      "time": "17:00–22:00 (5h)",
+      "larps": [
+        { "name": "Star Wars - Cienie Pokoju", "players": 12, "tags": ["scifi", "polityka", "napiecie"], "triggers": ["Przemoc i brutalność", "Wojna"] },
+        { "name": "Drugi raz pierwszy raz", "players": 28, "tags": ["relacje", "emocje", "cialo"], "triggers": ["Żałoba i strata bliskich", "Bliski kontakt fizyczny"] },
+        { "name": "Nie ufaj tengu w onsenie yokai", "players": 25, "tags": ["fantasy", "humor", "rytual"], "triggers": ["Bliski kontakt fizyczny"] },
+        { "name": "River Tale", "players": 12, "tags": ["fantasy", "emocje", "relacje"], "triggers": ["Przemoc i brutalność", "Dyskryminacja i wykluczenie"] },
+        { "name": "Nienawistna Ósemka", "players": 8, "tags": ["napiecie", "walka", "tajemnica"], "triggers": ["Przemoc i brutalność", "Krew i obrażenia ciała", "Śmierć i umieranie"] },
+        { "name": "Old Friends", "players": 8, "tags": ["relacje", "emocje", "refleksja"], "triggers": ["Żałoba i strata bliskich"] },
+        { "name": "Heptameron, czyli siedem opowieści na koniec świata", "players": 7, "tags": ["refleksja", "emocje", "groza"], "triggers": ["Lęk egzystencjalny / koniec świata", "Śmierć i umieranie", "Żałoba i strata bliskich"] },
+        { "name": "Headline", "players": 10, "tags": ["wspolczesnosc", "polityka", "napiecie"], "triggers": ["Dyskryminacja i wykluczenie"] }
+      ]
+    },
+    {
+      "id": "nd_rano",
+      "name": "Niedziela rano",
+      "time": "10:00–14:00 (4h)",
+      "larps": [
+        { "name": "Ortalion", "players": 16, "tags": ["historia", "polityka", "relacje"], "triggers": ["Dyskryminacja i wykluczenie", "Alkohol"] },
+        { "name": "Rój", "players": 20, "tags": ["scifi", "groza", "napiecie"], "triggers": ["Izolacja i osamotnienie", "Lęk egzystencjalny / koniec świata"] },
+        { "name": "Shadows of the Forgotten", "players": 20, "tags": ["fantasy", "groza", "tajemnica"], "triggers": ["Ciemność", "Śmierć i umieranie", "Lęk egzystencjalny / koniec świata"] },
+        { "name": "Duży John", "players": 13, "tags": ["napiecie", "walka", "tajemnica"], "triggers": ["Przemoc i brutalność", "Śmierć i umieranie"] },
+        { "name": "Voyager 3: wersja reżyserska", "players": 8, "tags": ["scifi", "refleksja", "emocje"], "triggers": ["Izolacja i osamotnienie", "Klaustrofobia", "Lęk egzystencjalny / koniec świata"] },
+        { "name": "Gra ludowa (Народная гульня)", "players": 14, "tags": ["rytual", "relacje", "historia"], "triggers": ["Wątki religijne / kult"] }
+      ]
+    }
+  ]
+}
