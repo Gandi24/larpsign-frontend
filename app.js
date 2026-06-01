@@ -144,9 +144,9 @@ function tagLabel(id) {
   return t ? t.label : id;
 }
 
-// Tagi tego larpa, które gracz ocenił negatywnie (-1/-2) — „to może Ci nie pasować”.
+// Tagi tego larpa, których gracz wyraźnie nie lubi (-2) — „to może Ci nie pasować”.
 function dislikesFor(larp, ratings) {
-  return (larp.tags || []).filter((id) => (ratings[id] || 0) < 0).map(tagLabel);
+  return (larp.tags || []).filter((id) => (ratings[id] || 0) <= -2).map(tagLabel);
 }
 
 function dislikesHTML(larp, ratings) {
