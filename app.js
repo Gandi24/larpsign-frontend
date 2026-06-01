@@ -139,6 +139,22 @@ function triggersHTML(larp, myTriggers) {
   return t ? `<div class="lc-trig">${t}</div>` : "";
 }
 
+function tagLabel(id) {
+  const t = data.preferenceTags.find((p) => p.id === id);
+  return t ? t.label : id;
+}
+
+// Tagi tego larpa, które gracz ocenił negatywnie (-1/-2) — „to może Ci nie pasować”.
+function dislikesFor(larp, ratings) {
+  return (larp.tags || []).filter((id) => (ratings[id] || 0) < 0).map(tagLabel);
+}
+
+function dislikesHTML(larp, ratings) {
+  const labels = dislikesFor(larp, ratings);
+  if (!labels.length) return "";
+  return `<div class="lc-warn">👎 Możesz nie polubić: ${labels.map(esc).join(", ")}</div>`;
+}
+
 function renderSlots() {
   const ratings = getRatings();
   const myTriggers = getTriggers();
@@ -161,6 +177,7 @@ function renderSlots() {
                     <span class="lc-name">${esc(name)}</span>
                     <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
                   </div>
+                  ${dislikesHTML(larp, ratings)}
                   ${triggersHTML(larp, myTriggers)}
                 </div>
                 <div class="ti-ctl">
@@ -186,6 +203,7 @@ function renderSlots() {
                 <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
               </div>
               <div class="bar"><i style="width:${pct}%"></i></div>
+              ${dislikesHTML(larp, ratings)}
               ${triggersHTML(larp, myTriggers)}
             </div>
             <button type="button" class="add" data-action="add" data-slot="${slot.id}" data-name="${esc(larp.name)}" ${full ? "disabled" : ""}>+ Dodaj</button>
@@ -248,6 +266,7 @@ function collect() {
         name,
         likeliness: pct,
         triggerConflicts: (larp.triggers || []).filter((t) => myTriggers.includes(t)),
+        dislikes: dislikesFor(larp, ratings),
       };
     });
   });

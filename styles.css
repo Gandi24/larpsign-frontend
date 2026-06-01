@@ -93,6 +93,7 @@ input.bad { border-color: var(--danger); }
 .lc-pct { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 .bar { height: 6px; background: #ececef; border-radius: 999px; margin: .45rem 0 .1rem; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); }
+.lc-warn { margin-top: .4rem; color: #a86a00; font-size: .8rem; font-weight: 600; }
 .lc-trig { margin-top: .5rem; display: flex; flex-wrap: wrap; gap: .35rem; }
 .lc-trig .trig { font-size: .76rem; font-weight: 600; color: #5d636b; background: #f0f0f2; padding: .12rem .5rem; border-radius: 999px; }
 .lc-trig .trig.hit { color: #fff; background: var(--danger); }
