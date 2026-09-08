@@ -5,6 +5,8 @@
 
 # Claude Code local config (may contain machine-specific settings)
 .claude/
+.agents/
+skills-lock.json
 
 # Node / tooling
 node_modules/

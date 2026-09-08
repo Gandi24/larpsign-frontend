@@ -1,0 +1,8 @@
+{
+  "name": "larp-signon",
+  "private": true,
+  "description": "No build step, no runtime dependencies — this file exists only to document how to run the tests.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

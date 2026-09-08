@@ -9,33 +9,49 @@ enjoy — even if they never read the programme. The flow is three steps:
    **dopasowanie %** (from your ratings) and show a **bold trigger list** (yours
    flagged in red). Click up to 4 per slot, in priority order.
 
-The frontend is hosted on **GitHub Pages**; submissions are stored in a **private
-GitHub repo** via a small **Cloudflare Worker**. It is **GDPR-aware**: explicit
-opt-in consent, a privacy notice (controller, purpose, retention, storage), and an
-erasure contact.
+This repo is the **frontend only** — 100% static, hosted on **GitHub Pages**.
+Submissions are stored in a **private GitHub repo** via a small **Google Apps
+Script Web App**, which lives in a separate repo:
+[**larpsign-backend**](https://github.com/Gandi24/larpsign-backend). Setting
+the whole thing up — both repos — takes **no terminal, no CLI, and no new
+unfamiliar platform**: everything is clicking through GitHub's and Google's
+own web UIs, and both are free at festival scale. It is **GDPR-aware**:
+explicit opt-in consent, a privacy notice (controller, purpose, retention,
+storage), and an erasure contact.
 
 ```
-Browser (GitHub Pages)  ──POST──▶  Cloudflare Worker  ──commit──▶  private repo
-   config.js / app.js               worker.js (holds token)         submissions/*.json
+larpsign-frontend (this repo, GitHub Pages)   larpsign-backend repo          Private GitHub repo
+┌─────────────────────────────┐               ┌────────────────────┐        ┌───────────────────┐
+│ index.html (shell + consent)│               │ Code.gs             │        │ submissions/*.json │
+│ config.js  (public config)  │──POST text/──▶│ (deployed as an     │──PUT──▶│ (audit trail via   │
+│ larps.json (content/data)   │  plain (JSON  │  Apps Script Web    │ commit │  git history)      │
+│ app.js / submit-outcome.js  │  string body) │  App; holds token)  │        └───────────────────┘
+│ styles.css                  │               └─────────────────────┘
+└─────────────────────────────┘
 ```
 
 ## Why not commit straight from the browser?
 
 A GitHub write-token in client-side JS is readable by anyone who visits the page,
-and GitHub auto-revokes tokens it finds in repos. The Worker keeps the token
-server-side as an encrypted secret. The browser only ever talks to the Worker.
+and GitHub auto-revokes tokens it finds in repos. Apps Script keeps the token
+server-side, in a Script Property, never in code. The browser only ever talks to
+the Apps Script Web App — see
+[larpsign-backend](https://github.com/Gandi24/larpsign-backend) for that side.
 
 ## Files
 
-| File            | What it is                                              |
-|-----------------|--------------------------------------------------------|
-| `index.html`    | Page shell (Polish) + consent gate                     |
-| `styles.css`    | Styling                                                |
-| `larps.json`    | **Edit this** — preference tags, triggers, and the 4 timeslots with their larps |
-| `config.js`     | **Edit this** — event name, organiser, retention, endpoint URL |
-| `app.js`        | Form engine (ratings, triggers, slot matching, submit/download) |
-| `worker.js`     | Cloudflare Worker submission backend                   |
-| `wrangler.toml` | Worker deploy config                                   |
+| File                        | What it is                                              |
+|-----------------------------|--------------------------------------------------------|
+| `index.html`                | Page shell (Polish) + consent gate                     |
+| `styles.css`                | Styling                                                |
+| `larps.json`                | **Edit this** — preference tags, triggers, and the 4 timeslots with their larps |
+| `config.js`                 | **Edit this** — event name, organiser, retention, endpoint URL |
+| `app.js`                    | Form engine (ratings, triggers, slot matching, submit/download) |
+| `submit-outcome.js`         | Pure "what does this response mean to the player" logic, shared with `tests/` |
+| `tests/`                    | Node tests for `submit-outcome.js` (`npm test`) — nothing else in this repo is tested |
+
+The Apps Script backend (`Code.gs`) and its own tests live in the separate
+[larpsign-backend](https://github.com/Gandi24/larpsign-backend) repo, not here.
 
 ## 1. Try it locally (no backend)
 
@@ -49,35 +65,24 @@ answers as a `.json` file instead of sending them — handy for testing.
 
 ## 2. Deploy the frontend to GitHub Pages
 
-1. Push this folder to a **public** repo (e.g. `larp-signon`).
+1. Fork this repo (or use it as a template) — e.g. into `<you>/larpsign-frontend`.
 2. Repo → **Settings → Pages** → Source: `main` / root → Save.
-3. Your form is at `https://<you>.github.io/larp-signon/`.
+3. Your form is at `https://<you>.github.io/larpsign-frontend/`.
 
 > Note: `config.js` and `larps.json` are public. That's fine — they contain no
 > secrets and no participant data.
 
 ## 3. Deploy the submission backend
 
-1. Create a **private** repo for the data, e.g. `larp-submissions`.
-2. Create a **fine-grained personal access token**
-   (GitHub → Settings → Developer settings → Fine-grained tokens):
-   - **Repository access:** only `larp-submissions`
-   - **Permissions:** Contents → **Read and write** (nothing else)
-   - Short expiry is fine; rotate after the event.
-3. Edit `worker.js`: set `GH_OWNER`, `GH_REPO`, and (after step 5) `ALLOWED_ORIGIN`.
-4. Deploy:
-   ```bash
-   npm i -g wrangler
-   wrangler login
-   wrangler deploy
-   wrangler secret put GH_TOKEN     # paste the token from step 2
-   ```
-5. Copy the printed `https://larp-signon.<you>.workers.dev` URL into
-   `config.js` → `submitEndpoint`, then redeploy Pages (commit + push).
-6. Lock it down: set `ALLOWED_ORIGIN` in `worker.js` to your Pages URL and
-   `wrangler deploy` again.
+The backend is a separate repo, deployed separately:
+[**larpsign-backend**](https://github.com/Gandi24/larpsign-backend). Fork it
+and follow its README — no terminal needed there either, same "click through
+web UIs" story, about five minutes. It ends with a Web App URL.
 
-Submissions land as files under `submissions/` in your private repo.
+Once you have it, paste that URL into **this** repo's `config.js` →
+`submitEndpoint`, then commit + push so Pages redeploys. Submissions will then
+land as files under `submissions/` in the private repo you set up while
+following larpsign-backend's instructions.
 
 ## Editing the data — `larps.json`
 
@@ -126,3 +131,18 @@ flag for the casting crew.
   delete it (and any local copies/exports).
 - **Minimise:** the form already asks only nick + optional e-mail plus preferences.
 - Keep the submissions repo **private** and limit who has access.
+
+## Running the tests
+
+Node's built-in test runner, no dependencies to install:
+
+```bash
+npm test
+```
+
+This covers `interpretSubmitOutcome()` in `submit-outcome.js` — the client
+side of the submit contract. The server side (`buildSubmissionRequest()`) has
+its own tests in the [larpsign-backend](https://github.com/Gandi24/larpsign-backend)
+repo. Everything else in this project is still verified manually (open it in
+a browser), matching how the rest of the codebase works. CI
+(`.github/workflows/test.yml`) runs `npm test` on every push and PR.

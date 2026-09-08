@@ -326,10 +326,15 @@ async function onSubmit(e) {
   try {
     const res = await fetch(cfg.submitEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // text/plain, not application/json: Apps Script Web Apps can't set
+      // custom CORS response headers, so a JSON content type would trigger a
+      // failing preflight. The body is still the JSON payload as a string.
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error(`Serwer zwrócił ${res.status}`);
+    const body = await res.json().catch(() => null);
+    const outcome = interpretSubmitOutcome(body);
+    if (!outcome.ok) throw new Error(outcome.message);
     $("#signon-form").innerHTML = `<section class="card"><h2>Dzięki! 🎭</h2>
       <p>Twoje zgłoszenie dotarło. Ekipa odezwie się w sprawie ról.</p>
       <p class="blurb">Chcesz coś zmienić albo usunąć swoje dane? Napisz na

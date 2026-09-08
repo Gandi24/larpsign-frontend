@@ -1,16 +1,17 @@
 // ---------------------------------------------------------------------------
 // Konfiguracja wdrożenia — edytuj ten plik, nie ruszaj reszty kodu.
 // Plik jest PUBLICZNY (serwuje go GitHub Pages). Nie wpisuj tu sekretów.
-// Token zapisu do GitHuba żyje wyłącznie w Cloudflare Workerze (worker.js).
+// Token zapisu do GitHuba żyje wyłącznie w Google Apps Script (repo larpsign-backend,
+// plik Code.gs), jako Script Property — nigdy w tym pliku.
 // ---------------------------------------------------------------------------
 window.CONFIG = {
   // Tytuł w nagłówku strony.
   eventName: "Zapisy na larpy — festiwal",
 
-  // Dokąd trafiają zgłoszenia — adres Twojego Cloudflare Workera.
+  // Dokąd trafiają zgłoszenia — adres Twojego wdrożenia Google Apps Script.
   // Przy testach lokalnych zostaw "" — formularz pozwoli pobrać odpowiedzi
   // jako plik JSON zamiast je wysyłać.
-  submitEndpoint: "", // np. "https://larp-signon.twojnick.workers.dev"
+  submitEndpoint: "", // np. "https://script.google.com/macros/s/XXXXX/exec"
 
   // RODO — administrator danych (czyli Wy / ekipa organizacyjna).
   controller: {
@@ -23,6 +24,8 @@ window.CONFIG = {
 
   // RODO — gdzie fizycznie leżą dane (informacja o procesorze).
   processorNote:
-    "Odpowiedzi są zapisywane jako pliki w prywatnym repozytorium GitHub " +
-    "(GitHub Inc., USA) i dostępne wyłącznie dla ekipy organizacyjnej.",
+    "Zgłoszenie w drodze do zapisu przechodzi przez Google Apps Script " +
+    "(Google LLC, USA), a następnie jest zapisywane jako plik w prywatnym " +
+    "repozytorium GitHub (GitHub Inc., USA), dostępnym wyłącznie dla ekipy " +
+    "organizacyjnej. Google nie przechowuje kopii zgłoszenia.",
 };
