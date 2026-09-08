@@ -1,6 +1,9 @@
 # Functional Specification — LARP Sign-On Form
 
-Status: living document, updated 2026-09-08 for the Apps Script backend migration.
+Status: living document, updated 2026-09-08 for the Apps Script backend
+migration and a shared-secret hardening pass. This describes what the code
+*does* — for what's actually deployed right now vs. just built and tested,
+see `DESIGN.md` §10.
 Scope: what the system does and the rules it follows. For *how it's built and why*, see `DESIGN.md`.
 
 ## 1. Purpose

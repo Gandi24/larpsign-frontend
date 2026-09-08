@@ -1,6 +1,12 @@
 # Spec — Zero-terminal, free submission backend for LARP sign-on
 
-Status: ready for agent
+Status: **implemented and superseded** — this is the plan as agreed before
+implementation started; it's kept as historical record of the reasoning, not
+as current truth. What actually got built (including two changes made after
+this was written — the backend split into its own `larpsign-backend` repo,
+and a shared-secret hardening pass) is documented in `../../DESIGN.md` and
+`../../SPEC.md`, whose §10/status lines are the source of truth for what's
+deployed right now.
 Source: synthesized from a `/grill-me` design-interview session (2026-09-08)
 
 ## Problem Statement

@@ -1,7 +1,9 @@
 # Design Document — LARP Sign-On Form
 
 Status: living document, updated 2026-09-08: Apps Script backend migration,
-then split into two repos.
+split into two repos, then a shared-secret hardening pass. **See §10 for
+exactly what is and isn't deployed right now** — code-complete and tested,
+not yet live for a real event.
 Scope: architecture, component responsibilities, and the reasoning behind
 choices — the *why* behind `SPEC.md`'s *what*. Update both together when
 behavior changes.
@@ -266,3 +268,36 @@ requirements) — treat it as the reference when unsure what the *correct*
 behavior is. This file is the reasoning behind that contract and the map of
 what's deliberately not built yet. When you change behavior, update `SPEC.md`;
 when you change *why* something is structured a certain way, update this file.
+
+## 10. Current deployment status (read this first when resuming)
+
+**Code is complete and tested. Nothing is actually deployed for a real event
+yet.** Concretely, as of the last session:
+
+- Both repos exist, are public, and are pushed to `main`:
+  [`larpsign-frontend`](https://github.com/Gandi24/larpsign-frontend) (this
+  repo — renamed in place from the original `signon`, git history intact) and
+  [`larpsign-backend`](https://github.com/Gandi24/larpsign-backend) (new).
+- CI is green on both (`.github/workflows/test.yml`, `npm test` — 5 tests
+  here, 8 in `larpsign-backend`).
+- GitHub Pages is live and serving this repo's `main`/root at
+  `https://gandi24.github.io/larpsign-frontend/`.
+- **But**: `config.js`'s `submitEndpoint` and `submitSecret` are both still
+  `""` — nobody has created a real Apps Script Web App yet. The live site
+  today only exercises the local-download fallback path (§6, "Empty
+  (local/dev)"), not real submission. `larpsign-backend`'s `Code.gs` still has
+  its placeholder `GH_OWNER = "your-github-username"` / `GH_REPO =
+  "larp-submissions"` — nobody has created a real private submissions repo,
+  minted a PAT, or run through `larpsign-backend`'s deploy walkthrough
+  against a live Google account either.
+- To make it real for an actual event: follow `larpsign-backend`'s README
+  top to bottom (private submissions repo → fine-grained PAT → paste `Code.gs`
+  into script.google.com → `GH_TOKEN` + `SUBMIT_SECRET` Script Properties →
+  deploy → authorize), then paste the resulting URL and secret into this
+  repo's `config.js`, commit, push.
+- `larps.json`'s per-larp `tags`/`triggers` are still the early, partly-
+  inferred draft flagged in its own `_note` (§7) — not yet confirmed by any
+  GM, because there's no real event's programme loaded in yet either.
+- Still purely documented, not built (§7): the results-review/casting tool,
+  and the shared multi-tenant backend with UUID invite codes (the considered
+  fallback if per-organiser self-hosting proves too much friction).
