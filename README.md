@@ -45,7 +45,7 @@ the Apps Script Web App — see
 | `index.html`                | Page shell (Polish) + consent gate                     |
 | `styles.css`                | Styling                                                |
 | `larps.json`                | **Edit this** — preference tags, triggers, and the 4 timeslots with their larps |
-| `config.js`                 | **Edit this** — event name, organiser, retention, endpoint URL |
+| `config.js`                 | **Edit this** — event name, organiser, retention, endpoint URL, shared secret |
 | `app.js`                    | Form engine (ratings, triggers, slot matching, submit/download) |
 | `submit-outcome.js`         | Pure "what does this response mean to the player" logic, shared with `tests/` |
 | `tests/`                    | Node tests for `submit-outcome.js` (`npm test`) — nothing else in this repo is tested |
@@ -69,20 +69,29 @@ answers as a `.json` file instead of sending them — handy for testing.
 2. Repo → **Settings → Pages** → Source: `main` / root → Save.
 3. Your form is at `https://<you>.github.io/larpsign-frontend/`.
 
-> Note: `config.js` and `larps.json` are public. That's fine — they contain no
-> secrets and no participant data.
+> Note: `config.js` and `larps.json` are public — that's fine for the event
+> data and settings, but see the caveat on `submitSecret` in step 3: it's a
+> *deterrent*, not a real secret, precisely because this file is public.
 
 ## 3. Deploy the submission backend
 
 The backend is a separate repo, deployed separately:
 [**larpsign-backend**](https://github.com/Gandi24/larpsign-backend). Fork it
 and follow its README — no terminal needed there either, same "click through
-web UIs" story, about five minutes. It ends with a Web App URL.
+web UIs" story, about five minutes. It ends with a Web App URL and a shared
+secret you made up.
 
-Once you have it, paste that URL into **this** repo's `config.js` →
-`submitEndpoint`, then commit + push so Pages redeploys. Submissions will then
-land as files under `submissions/` in the private repo you set up while
-following larpsign-backend's instructions.
+Once you have both, paste them into **this** repo's `config.js` →
+`submitEndpoint` and `submitSecret` (must match `larpsign-backend`'s
+`SUBMIT_SECRET` exactly), then commit + push so Pages redeploys. Submissions
+will then land as files under `submissions/` in the private repo you set up
+while following larpsign-backend's instructions.
+
+`submitSecret` is **not real security** — `config.js` is a public file, so
+anyone can read it. It only deters casual/automated abuse of the endpoint;
+see larpsign-backend's README ("Shared secret") for exactly what it does and
+doesn't protect against, and why that's still worth doing for a short-lived
+festival form.
 
 ## Editing the data — `larps.json`
 

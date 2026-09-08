@@ -162,17 +162,41 @@ session doesn't have to rediscover them by reading code:
 - **No dedup / resubmission handling.** The backend writes a new timestamped
   file per POST; a player submitting twice (e.g. after a network error retry)
   produces two files. No "upsert by identity" concept exists.
-- **No rate limiting or abuse protection** on the backend beyond the consent
-  check. Anyone who finds the endpoint can POST arbitrary (consent-flagged)
-  JSON. Acceptable for a low-traffic festival form behind an unlisted URL;
-  would need hardening (e.g. a shared secret or rate limiting) for a more
-  exposed deployment.
-- **No origin restriction is possible.** The old Worker's `ALLOWED_ORIGIN`
-  lockdown has no Apps Script equivalent — a Web App deployed with "Access:
-  Everyone" accepts requests from any origin, and Apps Script doesn't offer a
-  way to restrict that. This is a real, accepted regression from the Worker's
-  threat model, offset by the same mitigation as above: the deploy URL is
-  unlisted and not linked from anywhere public except this specific form.
+- **No rate limiting.** A correctly-secreted request (see below) still isn't
+  rate-limited — repeated valid-looking POSTs all succeed. Acceptable for a
+  low-traffic festival form; would need real hardening (e.g. Turnstile) for a
+  more exposed deployment.
+- **No origin restriction is possible, and it wouldn't have meant what it
+  looked like anyway.** The old Worker's `ALLOWED_ORIGIN` lockdown has no
+  Apps Script equivalent — a Web App deployed with "Access: Everyone" accepts
+  requests from any origin, and Apps Script doesn't offer a way to restrict
+  that. Worth being precise about what this actually cost: CORS is a
+  browser-enforced rule about which page's JS may *read a response*, never a
+  server-side access control — `ALLOWED_ORIGIN` never stopped a direct `curl`
+  either. It's a real regression in one specific way, though: because the
+  frontend sends `text/plain` to dodge Apps Script's CORS limitation (§3),
+  the browser treats it as a "simple request" and skips the preflight
+  entirely — meaning *any* third-party website could embed hidden JS that
+  silently POSTs to this endpoint from an unsuspecting visitor's browser, no
+  read of the frontend's source required. The shared secret below exists
+  specifically to close that gap (a blind cross-site POST won't know the
+  secret), on top of the unlisted-URL mitigation both backends always relied
+  on.
+- **Shared secret (`SUBMIT_SECRET` / `config.js`'s `submitSecret`) — a
+  deterrent, not real security, and documented as such.** Every request body
+  is now an envelope `{ secret, submission }`; the backend rejects anything
+  whose `secret` doesn't match before looking at `submission` at all (fails
+  *closed* if `SUBMIT_SECRET` isn't configured, not open). Because
+  `config.js` is a public file served as-is by GitHub Pages, this secret is
+  trivially readable by anyone who opens it — it does **not** stop a
+  determined actor who reads the frontend's source, only the CSRF-style blind
+  POST above and casual/automated scanning. This trade-off was a deliberate,
+  informed choice for this project's actual shape: a short-lived,
+  per-festival deployment where "stops opportunistic abuse without adding a
+  captcha/verification service" was judged worth it over real bot protection
+  (e.g. reCAPTCHA/Turnstile, verified server-side) — which remains the
+  documented next step (see the rate-limiting bullet above) if a deployment
+  ever needs more than this.
 - **Automated tests exist, narrowly.** `npm test` in each repo covers one pure
   function each (`interpretSubmitOutcome` here, `buildSubmissionRequest` in
   `larpsign-backend`'s `Code.gs`) — extracted specifically because the Apps

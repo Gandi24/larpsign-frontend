@@ -13,6 +13,14 @@ window.CONFIG = {
   // jako plik JSON zamiast je wysyłać.
   submitEndpoint: "", // np. "https://script.google.com/macros/s/XXXXX/exec"
 
+  // Ten sam ciąg znaków co SUBMIT_SECRET w Twoim Apps Script — musi się zgadzać.
+  // WAŻNE: to NIE jest prawdziwy sekret. Plik jest publiczny, więc każdy kto
+  // go otworzy, ten "sekret" zobaczy. Odstrasza tylko przypadkowe/automatyczne
+  // trafienia na adres Web Appki, nie chroni przed kimś, kto celowo czyta ten
+  // plik. W sam raz na krótkotrwałe zapisy na festiwal; jeśli potrzebujesz
+  // realnej ochrony (np. przed spamem), to inny temat (patrz DESIGN.md).
+  submitSecret: "",
+
   // RODO — administrator danych (czyli Wy / ekipa organizacyjna).
   controller: {
     name: "Ekipa festiwalowa",

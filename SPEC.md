@@ -125,7 +125,9 @@ all-empty submission is technically valid as long as name + consent are present.
 ```
 
 **Two delivery paths**, chosen by whether `config.js → submitEndpoint` is set:
-- **Set**: `POST` the payload's JSON string as the body, with
+- **Set**: `POST` an **envelope** — `{ secret, submission }`, where
+  `submission` is the payload above and `secret` is `config.js`'s
+  `submitSecret` — as the JSON-stringified body, with
   `Content-Type: text/plain;charset=utf-8` (not `application/json` — see §7
   for why), to the endpoint (the Apps Script Web App). The response is always
   HTTP 200; success/failure comes from the parsed body's `ok` field
@@ -150,15 +152,25 @@ answers or hand-deliver the file if the network path fails.
   outcome; the body's `ok` field carries success/failure instead
   (`{ ok: true, path }` or `{ ok: false, error }`).
 - Body must parse as JSON → else `{ ok: false, error: "invalid_json" }`.
-- Body must have `consent.given === true` → else
+- Body must be the envelope `{ secret, submission }` with `secret` matching
+  the `SUBMIT_SECRET` Script Property exactly → else
+  `{ ok: false, error: "unauthorized" }`. Fails **closed**: an unconfigured
+  `SUBMIT_SECRET` rejects every request, it does not admit them. This check
+  runs before `submission` is inspected at all, and `secret` is discarded
+  afterward — it never appears in what gets committed to GitHub. See
+  `larpsign-backend`'s README ("Shared secret") for what this protects
+  against and what it deliberately doesn't.
+- `submission.consent.given === true` → else
   `{ ok: false, error: "consent_required" }`. This is the **only**
-  server-side content validation; name/preferences/choices are not re-checked.
+  server-side content validation of `submission`; name/preferences/choices
+  are not re-checked.
 - Request validation and payload-shaping is the pure function
   `buildSubmissionRequest(rawBody, deps)` — given the raw body plus injected
-  time/randomness/base64-encoding, it returns either the rejection above or
-  the exact GitHub Contents API request to send. It has no Apps Script
-  globals in it, so it's covered by `larpsign-backend`'s own
-  `tests/build-submission-request.test.js` without a live deployment.
+  time/randomness/base64-encoding/expected-secret, it returns either a
+  rejection or the exact GitHub Contents API request to send (built from
+  `submission` only). It has no Apps Script globals in it, so it's covered by
+  `larpsign-backend`'s own `tests/build-submission-request.test.js` without a
+  live deployment.
 - On success: commits the payload as
   `submissions/<ISO-timestamp-with-dashes>-<6-char-random>.json` to a
   configured **private** GitHub repo via the Contents API, using a
@@ -172,9 +184,11 @@ answers or hand-deliver the file if the network path fails.
 - CORS: Apps Script Web Apps don't support custom CORS response headers at
   all, which is *why* the client sends `text/plain` instead of
   `application/json` (§6) — there is no `ALLOWED_ORIGIN`-style origin lockdown
-  available on this backend (see `DESIGN.md` §7, "no origin restriction is
-  possible").
-- No rate limiting, no dedup, no idempotency key — resubmitting creates a new
+  available on this backend. The shared-secret check above is what stands in
+  for it (see `DESIGN.md` §7, "no origin restriction is possible" and
+  "shared secret").
+- No rate limiting, no dedup, no idempotency key — a correctly-secreted
+  resubmission still creates a new
   file every time (see `DESIGN.md` §7).
 
 ## 8. GDPR / privacy requirements

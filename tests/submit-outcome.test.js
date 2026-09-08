@@ -15,6 +15,13 @@ test("known error code maps to a Polish message", () => {
   });
 });
 
+test("unauthorized (bad shared secret) maps to a Polish message", () => {
+  assert.deepEqual(interpretSubmitOutcome({ ok: false, error: "unauthorized" }), {
+    ok: false,
+    message: "formularz jest błędnie skonfigurowany (nieprawidłowy klucz) — zgłoś to organizatorom",
+  });
+});
+
 test("unrecognised error code falls back to a generic message", () => {
   assert.deepEqual(interpretSubmitOutcome({ ok: false, error: "something_new" }), {
     ok: false,

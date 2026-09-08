@@ -7,6 +7,7 @@
 
 const ERROR_MESSAGES = {
   invalid_json: "serwer nie zrozumiał zgłoszenia",
+  unauthorized: "formularz jest błędnie skonfigurowany (nieprawidłowy klucz) — zgłoś to organizatorom",
   consent_required: "brak zgody w zgłoszeniu",
   github_write_failed: "zapis po stronie serwera nie powiódł się",
 };

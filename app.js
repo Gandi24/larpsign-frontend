@@ -330,7 +330,11 @@ async function onSubmit(e) {
       // custom CORS response headers, so a JSON content type would trigger a
       // failing preflight. The body is still the JSON payload as a string.
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
+      // Envelope, not the bare submission: the backend checks `secret`
+      // against its own Script Property before touching `submission` at
+      // all. See config.js's submitSecret comment for what this does (and
+      // doesn't) protect against.
+      body: JSON.stringify({ secret: cfg.submitSecret, submission: payload }),
     });
     const body = await res.json().catch(() => null);
     const outcome = interpretSubmitOutcome(body);
