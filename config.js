@@ -11,7 +11,7 @@ window.CONFIG = {
   // Dokąd trafiają zgłoszenia — adres Twojego wdrożenia Google Apps Script.
   // Przy testach lokalnych zostaw "" — formularz pozwoli pobrać odpowiedzi
   // jako plik JSON zamiast je wysyłać.
-  submitEndpoint: "", // np. "https://script.google.com/macros/s/XXXXX/exec"
+  submitEndpoint: "https://script.google.com/macros/s/AKfycbwPydStEFqP53ADCyAevqTUzXyN4C5XXJSeT2B7mLMC1CnxiskRY4T8LV7VNIQL9sud5A/exec",
 
   // Ten sam ciąg znaków co SUBMIT_SECRET w Twoim Apps Script — musi się zgadzać.
   // WAŻNE: to NIE jest prawdziwy sekret. Plik jest publiczny, więc każdy kto
@@ -19,7 +19,7 @@ window.CONFIG = {
   // trafienia na adres Web Appki, nie chroni przed kimś, kto celowo czyta ten
   // plik. W sam raz na krótkotrwałe zapisy na festiwal; jeśli potrzebujesz
   // realnej ochrony (np. przed spamem), to inny temat (patrz DESIGN.md).
-  submitSecret: "",
+  submitSecret: "cRA5VFM3q4IHo0IpOTpZfOOSeqAOtZQV",
 
   // RODO — administrator danych (czyli Wy / ekipa organizacyjna).
   controller: {
