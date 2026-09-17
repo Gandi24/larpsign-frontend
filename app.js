@@ -8,7 +8,209 @@ const cfg = window.CONFIG || {};
 const $ = (sel) => document.querySelector(sel);
 
 let data = null; // larps.json
-const selections = {}; // { slotId: [larpName w kolejności priorytetu] }
+const selections = {}; // { slotId: [{ name, ticketTier }, ...] w kolejności priorytetu }
+
+// --- walidacja pól wymaganych: błąd pojawia się dopiero po kontakcie z polem
+// (blur/change), nie od razu przy wczytaniu strony — patrz DESIGN.md §6.
+const REQUIRED_TEXT_FIELDS = ["first-name", "last-name", "preferred-address", "email", "phone", "birthdate"];
+const touched = new Set();
+let submitAttempted = false;
+
+const REQUIRED_FIELD_MESSAGES = {
+  "first-name": "Podaj imię.",
+  "last-name": "Podaj nazwisko.",
+  "preferred-address": "Napisz, jak się do Ciebie zwracać.",
+  email: "Podaj adres e-mail.",
+  phone: "Podaj numer telefonu.",
+  birthdate: "Podaj datę urodzenia.",
+};
+
+function fieldMessage(id) {
+  const el = document.getElementById(id);
+  if (!el.value.trim()) return REQUIRED_FIELD_MESSAGES[id] || "To pole jest wymagane.";
+  if (id === "email" && !el.checkValidity()) return "Podaj prawidłowy adres e-mail.";
+  return "";
+}
+
+function setFieldError(id, msg) {
+  const input = document.getElementById(id);
+  const errorEl = document.getElementById(`${id}-error`);
+  input.classList.toggle("bad", !!msg);
+  if (msg) input.setAttribute("aria-invalid", "true");
+  else input.removeAttribute("aria-invalid");
+  if (errorEl) errorEl.textContent = msg;
+}
+
+function validateField(id) {
+  const msg = fieldMessage(id);
+  setFieldError(id, msg);
+  return !msg;
+}
+
+function validateCharPrefs() {
+  const ok = getCharacterPreferences().length > 0;
+  const group = $("#char-prefs");
+  const errorEl = $("#char-prefs-error");
+  group.classList.toggle("bad", !ok);
+  if (ok) group.removeAttribute("aria-invalid");
+  else group.setAttribute("aria-invalid", "true");
+  if (errorEl) errorEl.textContent = ok ? "" : "Zaznacz przynajmniej jedną opcję.";
+  return ok;
+}
+
+function validateConsents() {
+  const ok = $("#consent").checked && $("#consent-rules").checked;
+  $(".consent").classList.toggle("invalid", !ok);
+  const errorEl = $("#consent-error");
+  if (errorEl) errorEl.textContent = ok ? "" : "Zaznacz wszystkie wymagane zgody powyżej.";
+  return ok;
+}
+
+function ticketRowError(select) {
+  return select.closest(".ticket-row").querySelector(".field-error");
+}
+
+// --- zapis roboczy w localStorage: "zapisz i wróć później" ------------------
+// Autosave, nie przycisk — nikt nie zapomni kliknąć "zapisz" tuż przed
+// przypadkowym zamknięciem karty. Zgody (RODO) są świadomie wyłączone z
+// zapisu/odtwarzania: wracający gracz ma je potwierdzić na nowo, nie
+// dziedziczyć starą zgodę bez ponownego przeczytania.
+const DRAFT_KEY = "larpsign:draft:v1";
+
+function draftStorage() {
+  try {
+    localStorage.setItem("__larpsign_probe__", "1");
+    localStorage.removeItem("__larpsign_probe__");
+    return localStorage;
+  } catch (e) {
+    return null; // np. prywatne okno, wyłączony storage — autosave po prostu nic nie robi
+  }
+}
+const storage = draftStorage();
+
+function serializeDraft() {
+  return {
+    savedAt: new Date().toISOString(),
+    identity: {
+      firstName: $("#first-name").value,
+      lastName: $("#last-name").value,
+      preferredAddress: $("#preferred-address").value,
+      email: $("#email").value,
+      phone: $("#phone").value,
+      birthdate: $("#birthdate").value,
+    },
+    ratings: getRatings(),
+    triggers: getTriggers(),
+    characterPreferences: getCharacterPreferences(),
+    wantsNpc: $("#wants-npc").checked,
+    goldenTicket: getGoldenTicketPriorities(),
+    afterparty: {
+      friday: $("#after-friday").checked,
+      saturday: $("#after-saturday").checked,
+    },
+    selections,
+  };
+}
+
+let saveTimer = null;
+function scheduleSave() {
+  if (!storage) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveDraftNow, 600);
+}
+
+function saveDraftNow() {
+  if (!storage) return;
+  try {
+    storage.setItem(DRAFT_KEY, JSON.stringify(serializeDraft()));
+    showDraftSaved();
+  } catch (e) {
+    // np. limit storage — autosave jest wygodą, nie wymogiem; ciche pominięcie
+  }
+}
+
+function clearDraft() {
+  if (!storage) return;
+  try {
+    storage.removeItem(DRAFT_KEY);
+  } catch (e) {}
+}
+
+function clockTime(date) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function showDraftBadge(date) {
+  const badge = $("#draft-badge");
+  badge.textContent = `Zachowano dane · ${clockTime(date)}`;
+  badge.hidden = false;
+}
+
+function showDraftSaved() {
+  showDraftBadge(new Date());
+}
+
+// Wczytuje zapis roboczy (jeśli jest) i odtwarza pola/zaznaczenia; w przeciwnym
+// razie po prostu zeruje `selections`. Musi biec PO renderPrefs/renderTriggers/
+// renderCharacterPrefs (potrzebuje ich checkboxów/radiówek w DOM) i PRZED
+// renderSlots (żeby ten odczytał już właściwy stan ocen/triggerów/wyborów).
+function restoreDraft() {
+  const raw = storage && storage.getItem(DRAFT_KEY);
+  let draft = null;
+  try {
+    draft = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    clearDraft(); // zapis uszkodzony — lepiej zacząć czysto niż wywalić stronę
+  }
+
+  if (!draft) {
+    data.timeslots.forEach((s) => (selections[s.id] = []));
+    return;
+  }
+
+  const id = draft.identity || {};
+  $("#first-name").value = id.firstName || "";
+  $("#last-name").value = id.lastName || "";
+  $("#preferred-address").value = id.preferredAddress || "";
+  $("#email").value = id.email || "";
+  $("#phone").value = id.phone || "";
+  $("#birthdate").value = id.birthdate || "";
+
+  Object.entries(draft.ratings || {}).forEach(([tagId, v]) => {
+    const el = document.querySelector(`[name="pref_${tagId}"][value="${v}"]`);
+    if (el) el.checked = true;
+  });
+  (draft.triggers || []).forEach((val) => {
+    const el = document.querySelector(`[name="trigger"][value="${CSS.escape(val)}"]`);
+    if (el) el.checked = true;
+  });
+  (draft.characterPreferences || []).forEach((val) => {
+    const el = document.querySelector(`[name="charpref"][value="${CSS.escape(val)}"]`);
+    if (el) el.checked = true;
+  });
+  $("#wants-npc").checked = !!draft.wantsNpc;
+  (draft.goldenTicket || []).forEach((name, i) => {
+    const sel = $(`#golden-ticket-${i + 1}`);
+    if (sel && name) sel.value = name;
+  });
+  if (draft.afterparty) {
+    $("#after-friday").checked = !!draft.afterparty.friday;
+    $("#after-saturday").checked = !!draft.afterparty.saturday;
+  }
+
+  // Walidacja względem aktualnych danych: slot albo larp mógł zniknąć z
+  // larps.json od czasu zapisu — odrzuć takie wybory po cichu.
+  data.timeslots.forEach((slot) => {
+    const picks = (draft.selections && draft.selections[slot.id]) || [];
+    selections[slot.id] = picks
+      .filter((p) => p && larpByName(slot, p.name))
+      .map((p) => ({ name: p.name, ticketTier: p.ticketTier || "" }));
+  });
+
+  showDraftBadge(new Date(draft.savedAt));
+}
 
 const SCALE = [
   { v: -2, label: "Nie znoszę" },
@@ -34,20 +236,58 @@ async function init() {
     return;
   }
 
-  data.timeslots.forEach((s) => (selections[s.id] = []));
   renderLegend();
   renderPrefs();
   renderTriggers();
+  renderCharacterPrefs();
+  renderGoldenTicketOptions();
+  restoreDraft(); // ustawia `selections` (z zapisu albo pusto) + odtwarza pola/zaznaczenia
+  updateTriggerGroupCounts();
   renderSlots();
+
+  if (cfg.rulesUrl) {
+    $("#consent-rules-text").innerHTML =
+      `Zapoznał*m się z <a href="${esc(cfg.rulesUrl)}" target="_blank" rel="noopener">regulaminem wydarzenia</a>. *`;
+  }
+  if (cfg.programUrl) {
+    $("#intro-text").innerHTML =
+      `Pełne opisy larpów i harmonogram festiwalu znajdziesz
+       <a href="${esc(cfg.programUrl)}" target="_blank" rel="noopener">na stronie wydarzenia</a>.`;
+  }
+
+  REQUIRED_TEXT_FIELDS.forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener("blur", () => {
+      touched.add(id);
+      validateField(id);
+    });
+    el.addEventListener("input", () => {
+      // Nie strasz błędem, dopóki pole nie zostało dotknięte (blur) albo
+      // nie było próby wysyłki — ale gdy błąd już się pojawił, niech zniknie
+      // na bieżąco, bez czekania na kolejne opuszczenie pola.
+      if (touched.has(id) || submitAttempted) validateField(id);
+    });
+  });
+  $("#char-prefs").addEventListener("change", validateCharPrefs);
+  ["#consent", "#consent-rules"].forEach((sel) =>
+    $(sel).addEventListener("change", validateConsents)
+  );
 
   const form = $("#signon-form");
   form.addEventListener("submit", onSubmit);
   form.addEventListener("change", (e) => {
     // zmiana preferencji/triggerów przelicza sloty
-    if (e.target.matches('[name^="pref_"], [name="trigger"]')) renderSlots();
+    if (e.target.matches('[name^="pref_"], [name="trigger"]')) {
+      renderSlots();
+      if (submitAttempted) revalidateTickets();
+    }
   });
   $("#slots").addEventListener("click", onSlotAction);
+  $("#slots").addEventListener("change", onTicketChange);
   $("#download-btn").addEventListener("click", () => download(collect()));
+
+  form.addEventListener("input", scheduleSave);
+  form.addEventListener("change", scheduleSave);
 }
 
 function renderPrivacy() {
@@ -86,12 +326,79 @@ function renderPrefs() {
 }
 
 function renderTriggers() {
-  $("#triggers").innerHTML = data.triggers
+  $("#triggers").innerHTML = (data.triggerGroups || [])
     .map(
-      (t) => `<label class="checkline"><input type="checkbox" name="trigger" value="${esc(t)}"/>
-        <span>${esc(t)}</span></label>`
+      (g) => `<details class="trigger-group">
+        <summary><span class="trig-label">${esc(g.label)}</span><span class="trig-count"></span></summary>
+        <div class="trigger-grid">
+          ${g.triggers
+            .map(
+              (t) => `<label class="checkline"><input type="checkbox" name="trigger" value="${esc(t)}"/>
+                <span>${esc(t)}</span></label>`
+            )
+            .join("")}
+        </div>
+      </details>`
     )
     .join("");
+  $("#triggers").addEventListener("change", updateTriggerGroupCounts);
+  updateTriggerGroupCounts();
+}
+
+// Nazwy zaznaczonych triggerów w każdej (być może zwiniętej) kategorii —
+// widoczne bez rozwijania grupy, żeby nie trzeba było jej otwierać, by
+// przypomnieć sobie co się tam zaznaczyło.
+function updateTriggerGroupCounts() {
+  document.querySelectorAll(".trigger-group").forEach((det) => {
+    const checked = [...det.querySelectorAll('input[name="trigger"]:checked')].map((el) => el.value);
+    const badge = det.querySelector(".trig-count");
+    if (!checked.length) {
+      badge.textContent = "";
+      return;
+    }
+    const shown = checked.slice(0, 3).join(", ");
+    const extra = checked.length > 3 ? ` +${checked.length - 3}` : "";
+    badge.textContent = `— ${shown}${extra}`;
+  });
+}
+
+function renderCharacterPrefs() {
+  $("#char-prefs").innerHTML = (data.characterPreferences || [])
+    .map(
+      (c) => `<label class="checkline"><input type="checkbox" name="charpref" value="${esc(c)}"/>
+        <span>${esc(c)}</span></label>`
+    )
+    .join("");
+}
+
+function getCharacterPreferences() {
+  return [...document.querySelectorAll('[name="charpref"]:checked')].map((n) => n.value);
+}
+
+// --- Złoty Bilet: do 3 uszeregowanych wyborów, z pełnej listy larpów -------
+
+function allLarpNames() {
+  return data.timeslots.flatMap((slot) => slot.larps.map((l) => l.name));
+}
+
+function renderGoldenTicketOptions() {
+  const options =
+    `<option value="">— nie dotyczy —</option>` +
+    allLarpNames()
+      .map((name) => `<option value="${esc(name)}">${esc(name)}</option>`)
+      .join("");
+  ["#golden-ticket-1", "#golden-ticket-2", "#golden-ticket-3"].forEach((sel) => {
+    $(sel).innerHTML = options;
+  });
+}
+
+// Puste/nieużyte wybory pomijamy — kolejność zachowana, bez wymuszania
+// unikalności między polami (jeśli ktoś wybierze ten sam larp dwa razy,
+// ekipa i tak przeczyta to jako jeden wybór).
+function getGoldenTicketPriorities() {
+  return ["#golden-ticket-1", "#golden-ticket-2", "#golden-ticket-3"]
+    .map((sel) => $(sel).value)
+    .filter(Boolean);
 }
 
 // --- liczenie dopasowania ---------------------------------------------------
@@ -122,6 +429,20 @@ function likeLabel(pct) {
   if (pct >= 60) return "Pasuje";
   if (pct >= 40) return "Może być";
   return "Raczej nie dla Ciebie";
+}
+
+// Pasek dopasowania: jeden odcień (#38ed9a), rosnąca intensywność. Słabe
+// dopasowanie ma prawie zlewać się z tłem paska; świetne ma być w pełni
+// nasyconą, dokładnie zadaną zielenią. Świadomie jeden odcień, nie przejście
+// czerwień→zieleń: taki gradient byłby nieodróżnialny dla osób z daltonizmem
+// czerwono-zielonym. Sama zieleń dobrze koresponduje z --ok (sukces) użytym
+// gdzie indziej w formularzu — konsekwentne "zielony = dobrze" w całej stronie.
+function likelinessColor(pct) {
+  const t = Math.max(0, Math.min(100, pct)) / 100;
+  const hue = 153; // barwa #38ed9a
+  const sat = 15 + t * 68; // 15% (blady) -> 83% (pełne nasycenie, jak #38ed9a)
+  const light = 88 - t * 31; // 88% (blisko tła paska) -> 57% (jak #38ed9a)
+  return `hsl(${hue} ${sat.toFixed(0)}% ${light.toFixed(0)}%)`;
 }
 
 // --- render: sloty ----------------------------------------------------------
@@ -155,6 +476,20 @@ function dislikesHTML(larp, ratings) {
   return `<div class="lc-warn">👎 Możesz nie polubić: ${labels.map(esc).join(", ")}</div>`;
 }
 
+function ticketSelectHTML(slot, name, ticketTier, i) {
+  const options = (data.ticketTiers || [])
+    .map(
+      (t) => `<option value="${esc(t.id)}" ${t.id === ticketTier ? "selected" : ""}>${esc(t.label)} (${esc(t.price)})</option>`
+    )
+    .join("");
+  const errorId = `ticket-error-${slot.id}-${i}`;
+  return `<select class="ticket-select" data-action="ticket" data-slot="${slot.id}" data-name="${esc(name)}" aria-describedby="${errorId}">
+      <option value="" ${!ticketTier ? "selected" : ""}>— wybierz bilet —</option>
+      ${options}
+    </select>
+    <p class="field-error" id="${errorId}" aria-live="polite"></p>`;
+}
+
 function renderSlots() {
   const ratings = getRatings();
   const myTriggers = getTriggers();
@@ -167,23 +502,27 @@ function renderSlots() {
       // Strefa „Twoje wybory” — w kolejności priorytetu.
       const tray = picks.length
         ? picks
-            .map((name, i) => {
-              const larp = larpByName(slot, name);
+            .map((pick, i) => {
+              const larp = larpByName(slot, pick.name);
               const pct = likeliness(larp, ratings);
               return `<li class="tray-item">
                 <span class="prio">${i + 1}</span>
                 <div class="ti-main">
                   <div class="lc-head">
-                    <span class="lc-name">${esc(name)}</span>
+                    <span class="lc-name">${esc(pick.name)}</span>
                     <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
                   </div>
                   ${dislikesHTML(larp, ratings)}
                   ${triggersHTML(larp, myTriggers)}
+                  <div class="ticket-row">
+                    <label>Bilet <span class="req">*</span></label>
+                    ${ticketSelectHTML(slot, pick.name, pick.ticketTier, i)}
+                  </div>
                 </div>
                 <div class="ti-ctl">
-                  <button type="button" aria-label="W górę" data-action="up" data-slot="${slot.id}" data-name="${esc(name)}" ${i === 0 ? "disabled" : ""}>▲</button>
-                  <button type="button" aria-label="W dół" data-action="down" data-slot="${slot.id}" data-name="${esc(name)}" ${i === picks.length - 1 ? "disabled" : ""}>▼</button>
-                  <button type="button" aria-label="Usuń" class="rm" data-action="remove" data-slot="${slot.id}" data-name="${esc(name)}">✕</button>
+                  <button type="button" aria-label="W górę" data-action="up" data-slot="${slot.id}" data-name="${esc(pick.name)}" ${i === 0 ? "disabled" : ""}>▲</button>
+                  <button type="button" aria-label="W dół" data-action="down" data-slot="${slot.id}" data-name="${esc(pick.name)}" ${i === picks.length - 1 ? "disabled" : ""}>▼</button>
+                  <button type="button" aria-label="Usuń" class="rm" data-action="remove" data-slot="${slot.id}" data-name="${esc(pick.name)}">✕</button>
                 </div>
               </li>`;
             })
@@ -192,7 +531,7 @@ function renderSlots() {
 
       // Strefa „Pozostałe” — niewybrane, wg dopasowania.
       const available = slot.larps
-        .filter((l) => !picks.includes(l.name))
+        .filter((l) => !picks.some((p) => p.name === l.name))
         .map((l) => ({ larp: l, pct: likeliness(l, ratings) }))
         .sort((a, b) => b.pct - a.pct)
         .map(
@@ -202,7 +541,7 @@ function renderSlots() {
                 <span class="lc-name">${esc(larp.name)}</span>
                 <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
               </div>
-              <div class="bar"><i style="width:${pct}%"></i></div>
+              <div class="bar"><i style="width:${pct}%; background:${likelinessColor(pct)}"></i></div>
               ${dislikesHTML(larp, ratings)}
               ${triggersHTML(larp, myTriggers)}
             </div>
@@ -211,7 +550,7 @@ function renderSlots() {
         )
         .join("");
 
-      return `<div class="slot">
+      return `<div class="slot" data-slot-id="${slot.id}">
         <div class="slot-head">
           <h3>${esc(slot.name)} <span class="slot-time">${esc(slot.time)}</span></h3>
           <span class="slot-hint">wybierz do ${MAX_PICKS} • kolejność = priorytet</span>
@@ -230,12 +569,12 @@ function onSlotAction(e) {
   if (!btn || btn.disabled) return;
   const { action, slot: slotId, name } = btn.dataset;
   const picks = selections[slotId];
-  const at = picks.indexOf(name);
+  const at = picks.findIndex((p) => p.name === name);
 
   switch (action) {
     case "add":
       if (picks.length >= MAX_PICKS || at >= 0) return;
-      picks.push(name);
+      picks.push({ name, ticketTier: "" });
       setStatus("");
       break;
     case "remove":
@@ -249,6 +588,20 @@ function onSlotAction(e) {
       break;
   }
   renderSlots();
+  if (submitAttempted) revalidateTickets();
+  scheduleSave(); // klik przycisku nie wywołuje input/change na formularzu
+}
+
+// Zmiana biletu nie wymaga przerysowania sloty — <select> już pokazuje wybór.
+function onTicketChange(e) {
+  const sel = e.target.closest('select[data-action="ticket"]');
+  if (!sel) return;
+  const { slot: slotId, name } = sel.dataset;
+  const pick = selections[slotId].find((p) => p.name === name);
+  if (pick) pick.ticketTier = sel.value;
+  sel.classList.remove("bad");
+  sel.removeAttribute("aria-invalid");
+  ticketRowError(sel).textContent = "";
 }
 
 // --- zbieranie + walidacja --------------------------------------------------
@@ -258,12 +611,13 @@ function collect() {
   const myTriggers = getTriggers();
   const choices = {};
   data.timeslots.forEach((slot) => {
-    choices[slot.id] = selections[slot.id].map((name, i) => {
-      const larp = slot.larps.find((l) => l.name === name);
+    choices[slot.id] = selections[slot.id].map((pick, i) => {
+      const larp = slot.larps.find((l) => l.name === pick.name);
       const pct = likeliness(larp, ratings);
       return {
         priority: i + 1,
-        name,
+        name: pick.name,
+        ticketTier: pick.ticketTier || null,
         likeliness: pct,
         triggerConflicts: (larp.triggers || []).filter((t) => myTriggers.includes(t)),
         dislikes: dislikesFor(larp, ratings),
@@ -272,28 +626,73 @@ function collect() {
   });
 
   return {
-    meta: { event: cfg.eventName || "", submittedAt: new Date().toISOString(), schemaVersion: 2 },
-    identity: { name: $("#name").value.trim(), email: $("#email").value.trim() },
-    consent: { given: $("#consent").checked, timestamp: new Date().toISOString() },
+    meta: { event: cfg.eventName || "", submittedAt: new Date().toISOString(), schemaVersion: 4 },
+    identity: {
+      firstName: $("#first-name").value.trim(),
+      lastName: $("#last-name").value.trim(),
+      preferredAddress: $("#preferred-address").value.trim(),
+      email: $("#email").value.trim(),
+      phone: $("#phone").value.trim(),
+      birthdate: $("#birthdate").value,
+    },
+    characterPreferences: getCharacterPreferences(),
+    wantsNpc: $("#wants-npc").checked,
+    goldenTicket: { priorities: getGoldenTicketPriorities() },
+    afterparty: {
+      friday: $("#after-friday").checked,
+      saturday: $("#after-saturday").checked,
+    },
+    consent: {
+      given: $("#consent").checked,
+      rulesRead: $("#consent-rules").checked,
+      photoVideo: $("#consent-photo").checked,
+      marketingEmail: $("#consent-marketing").checked,
+      timestamp: new Date().toISOString(),
+    },
     preferences: ratings,
     triggers: myTriggers,
     choices,
   };
 }
 
-function validate() {
+// Sprawdza bilety we wszystkich slotach; zwraca pierwszy brakujący <select>
+// (albo null). Używane przy submit, a także po każdym przerysowaniu slotów
+// (dodanie/usunięcie/zmiana kolejności czyści DOM, w tym stan błędu) — ale
+// tylko po pierwszej próbie wysyłki, żeby nie strasić błędem na zapas.
+function revalidateTickets() {
   let firstBad = null;
-  $("#name").classList.remove("bad");
-  $(".consent").classList.remove("invalid");
+  data.timeslots.forEach((slot) => {
+    const selects = document.querySelectorAll(`.slot[data-slot-id="${slot.id}"] .ticket-select`);
+    selections[slot.id].forEach((pick, i) => {
+      const sel = selects[i];
+      const ok = !!pick.ticketTier;
+      sel.classList.toggle("bad", !ok);
+      if (ok) sel.removeAttribute("aria-invalid");
+      else sel.setAttribute("aria-invalid", "true");
+      ticketRowError(sel).textContent = ok ? "" : "Wybierz bilet dla tej gry.";
+      if (!ok && !firstBad) firstBad = sel;
+    });
+  });
+  return firstBad;
+}
 
-  if (!$("#name").value.trim()) {
-    $("#name").classList.add("bad");
-    firstBad = $("#name");
-  }
-  if (!$("#consent").checked) {
-    $(".consent").classList.add("invalid");
-    if (!firstBad) firstBad = $(".consent");
-  }
+function validate() {
+  submitAttempted = true;
+  let firstBad = null;
+  const note = (ok, el) => {
+    if (!ok && !firstBad) firstBad = el;
+  };
+
+  REQUIRED_TEXT_FIELDS.forEach((id) => {
+    touched.add(id);
+    note(validateField(id), document.getElementById(id));
+  });
+
+  note(validateCharPrefs(), $("#char-prefs"));
+  note(validateConsents(), $(".consent"));
+  const badTicket = revalidateTickets();
+  note(!badTicket, badTicket);
+
   return firstBad;
 }
 
@@ -304,7 +703,7 @@ async function onSubmit(e) {
   const bad = validate();
   if (bad) {
     bad.scrollIntoView({ behavior: "smooth", block: "center" });
-    setStatus("Uzupełnij imię/ksywkę i zaznacz zgodę.", "err");
+    setStatus("Sprawdź podświetlone pola powyżej.", "err");
     return;
   }
 
@@ -313,6 +712,7 @@ async function onSubmit(e) {
 
   if (!cfg.submitEndpoint) {
     download(payload);
+    clearDraft();
     setStatus(
       "Brak skonfigurowanego serwera, więc Twoje odpowiedzi zostały pobrane jako plik. " +
         "Prześlij go organizatorom.",
@@ -339,6 +739,7 @@ async function onSubmit(e) {
     const body = await res.json().catch(() => null);
     const outcome = interpretSubmitOutcome(body);
     if (!outcome.ok) throw new Error(outcome.message);
+    clearDraft();
     $("#signon-form").innerHTML = `<section class="card"><h2>Dzięki! 🎭</h2>
       <p>Twoje zgłoszenie dotarło. Ekipa odezwie się w sprawie ról.</p>
       <p class="blurb">Chcesz coś zmienić albo usunąć swoje dane? Napisz na
@@ -359,7 +760,8 @@ function download(payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const who = (payload.identity.name || "zgloszenie").replace(/[^\w.-]+/g, "_");
+  const fullName = `${payload.identity.firstName} ${payload.identity.lastName}`.trim();
+  const who = (fullName || "zgloszenie").replace(/[^\w.-]+/g, "_");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   a.href = url;
   a.download = `larp-zapis-${who}-${stamp}.json`;

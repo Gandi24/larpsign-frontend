@@ -1,13 +1,24 @@
 # Zapisy na larpy (LARP sign-on)
 
 A static, **Polish-language** sign-up form that guides players to the larps they'll
-enjoy — even if they never read the programme. The flow is three steps:
+enjoy — even if they never read the programme. The flow:
 
-1. **Preferencje** — rate ~16 theme tags on a −2…+2 scale (Nie znoszę → Uwielbiam).
-2. **Triggery** — tick the ones that affect you (yes/no).
-3. **Sloty** — in each of the 4 timeslots, the larps are auto-ranked by a computed
+1. **Kto się zapisuje** — name, contact, birthdate (18+ check), and character
+   preferences.
+2. **Preferencje** — rate ~31 theme tags on a −2…+2 scale (Nie znoszę → Uwielbiam).
+3. **Triggery** — tick the ones that affect you (yes/no), organized into ~11
+   collapsible categories (75 triggers total — too many to show as one flat list).
+4. **Sloty** — in each of the 4 timeslots, the larps are auto-ranked by a computed
    **dopasowanie %** (from your ratings) and show a **bold trigger list** (yours
-   flagged in red). Click up to 4 per slot, in priority order.
+   flagged in red). Click up to 4 per slot, in priority order, and choose a
+   **ticket tier** for each.
+5. **Afterparty** and **zgody** (consents) — optional afterparty interest, plus
+   the required/optional GDPR consents.
+
+The whole form autosaves to your browser's local storage as you go (a small
+"Zachowano dane" badge, top-right, confirms it) — close the tab by accident
+and reopen the page later, and your answers are still there. Nothing is sent
+anywhere until you actually submit.
 
 This repo is the **frontend only** — 100% static, hosted on **GitHub Pages**.
 Submissions are stored in a **private GitHub repo** via a small **Google Apps
@@ -44,8 +55,9 @@ the Apps Script Web App — see
 |-----------------------------|--------------------------------------------------------|
 | `index.html`                | Page shell (Polish) + consent gate                     |
 | `styles.css`                | Styling                                                |
-| `larps.json`                | **Edit this** — preference tags, triggers, and the 4 timeslots with their larps |
-| `config.js`                 | **Edit this** — event name, organiser, retention, endpoint URL, shared secret |
+| `assets/krakon-logo.svg`    | Krak-ON's own logo (white), shown in the top masthead — swap for your event's own mark if forking this template |
+| `larps.json`                | **Edit this** — preference tags, triggers, character preferences, ticket tiers, and the 4 timeslots with their larps |
+| `config.js`                 | **Edit this** — event name, organiser, retention, rules link, endpoint URL, shared secret |
 | `app.js`                    | Form engine (ratings, triggers, slot matching, submit/download) |
 | `submit-outcome.js`         | Pure "what does this response mean to the player" logic, shared with `tests/` |
 | `tests/`                    | Node tests for `submit-outcome.js` (`npm test`) — nothing else in this repo is tested |
@@ -99,30 +111,46 @@ Everything content-related lives here; no code changes needed.
 
 - `preferenceTags` — `[{ id, label }]`. Each becomes one −2…+2 rating row. The `id`
   is what larps reference in their `tags`.
-- `triggers` — `[string]`. Each becomes one yes/no checkbox.
+- `triggerGroups` — `[{ id, label, triggers: [string] }]`. Each group becomes
+  one collapsible category in the triggers step; each string inside it
+  becomes one yes/no checkbox. Larps reference triggers by the plain string
+  (no group indirection) in their own `triggers` array — a trigger only
+  needs to exist in *some* group's list to be usable by a larp.
+- `characterPreferences` — `[string]`. Each becomes one yes/no checkbox
+  ("what characters do you want to play") — informational for casting, not
+  used in matching.
+- `ticketTiers` — `[{ id, label, price }]`. Each becomes one option in the
+  per-slot-pick ticket dropdown. `price` is a display string only — this
+  form has no payment processing.
 - `timeslots` — `[{ id, name, time, larps: [...] }]`. Each larp has
-  `name`, `players`, `tags` (ids from `preferenceTags`), and `triggers` (strings
-  from `triggers`).
+  `name`, `players`, `tags` (ids from `preferenceTags`), and `triggers`
+  (plain strings, matching one from some group in `triggerGroups`).
 
 **How dopasowanie % is computed:** the average of the player's ratings for that
 larp's `tags`, rescaled from [−2, +2] to [0, 100]. No ratings yet → 50% (neutral).
 Larps in a slot are sorted by this, so the best matches float to the top.
 
-> The tags/triggers per larp are an **early, partly inventive draft** inferred from
-> titles/authors/format. Have each GM confirm their own larp's `tags` and `triggers`.
+> `preferenceTags`/`triggerGroups` hold Krak-ON's real 2026 programme data,
+> unified from the organiser's own per-larp tags/triggers (not guessed from
+> titles). See `.scratch/2026-krakon-tag-trigger-unification/` if you're
+> doing this unification pass again for a different event's programme.
 
 ## What a submission contains
 
 ```jsonc
 {
-  "meta": { "event", "submittedAt", "schemaVersion": 2 },
-  "identity": { "name", "email" },
-  "consent": { "given": true, "timestamp" },
+  "meta": { "event", "submittedAt", "schemaVersion": 4 },
+  "identity": { "firstName", "lastName", "preferredAddress", "email", "phone", "birthdate" },
+  "characterPreferences": ["Kobiece", ...],
+  "wantsNpc": false,
+  "goldenTicket": { "priorities": ["<larp name>", ...] },   // 0-3, temporary feature
+  "afterparty": { "friday": true, "saturday": false },
+  "consent": { "given": true, "rulesRead": true, "photoVideo": true, "marketingEmail": false, "timestamp" },
   "preferences": { "scifi": 2, "romans": -2, ... },   // tag id -> rating
   "triggers": ["Izolacja i osamotnienie", ...],        // the player's triggers
   "choices": {                                          // per timeslot, ordered
     "nd_rano": [
-      { "priority": 1, "name", "likeliness": 83, "triggerConflicts": [...] }
+      { "priority": 1, "name", "ticketTier": "wsparcia", "likeliness": 83, "triggerConflicts": [...] }
     ]
   }
 }
@@ -138,7 +166,13 @@ flag for the casting crew.
   Deleting the file from the private repo removes the data.
 - **Erasure requests** come to `controller.email`; find the person's file and
   delete it (and any local copies/exports).
-- **Minimise:** the form already asks only nick + optional e-mail plus preferences.
+- **Minimise:** identity fields are limited to what's needed for casting,
+  emergency contact, and 18+ verification (name, address form, e-mail, phone,
+  birthdate), plus preferences.
+- **Photo/video consent** (`consent.photoVideo`) is optional and separate
+  from the general data-processing consent — a player can register without
+  it. Only use/publish a person's photos if this is `true`, and honor a later
+  withdrawal independently (don't touch their event registration for it).
 - Keep the submissions repo **private** and limit who has access.
 
 ## Running the tests

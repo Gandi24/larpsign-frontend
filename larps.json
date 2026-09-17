@@ -1,40 +1,280 @@
 {
-  "_note": "WCZESNA WERSJA. Tagi i triggery częściowo zgadywane z tytułów/autorów/formatu — do potwierdzenia z MG. Podział na sloty wg arkusza organizatorów.",
+  "_note": "Dane z arkusza organizatorów Krak-ON (2026-09-18) — tagi i triggery zunifikowane wspólnie z organizatorem z ~90/~93 surowych wariantów.",
   "preferenceTags": [
-    { "id": "scifi", "label": "Science fiction" },
-    { "id": "fantasy", "label": "Fantasy" },
-    { "id": "historia", "label": "Klimat historyczny / retro" },
-    { "id": "wspolczesnosc", "label": "Czasy współczesne" },
-    { "id": "groza", "label": "Groza / horror" },
-    { "id": "humor", "label": "Humor" },
-    { "id": "emocje", "label": "Silne emocje / dramat" },
-    { "id": "napiecie", "label": "Napięcie / akcja" },
-    { "id": "romans", "label": "Wątki romantyczne" },
-    { "id": "refleksja", "label": "Refleksja / filozofia" },
-    { "id": "polityka", "label": "Polityka / intryga" },
-    { "id": "walka", "label": "Konflikt / walka" },
-    { "id": "relacje", "label": "Relacje i więzi" },
-    { "id": "tajemnica", "label": "Tajemnica / śledztwo" },
-    { "id": "rytual", "label": "Rytuał / duchowość / folklor" },
-    { "id": "cialo", "label": "Ekspresja ciałem / larp bez słów" }
+    {
+      "id": "emocje",
+      "label": "Silne emocje / dramat"
+    },
+    {
+      "id": "rytual",
+      "label": "Rytuał / duchowość / folklor"
+    },
+    {
+      "id": "tajemnica",
+      "label": "Tajemnica / śledztwo"
+    },
+    {
+      "id": "trudne_wybory",
+      "label": "Trudne wybory / dylematy moralne"
+    },
+    {
+      "id": "taniec_ruch",
+      "label": "Taniec / larp ruchowy"
+    },
+    {
+      "id": "sensualnosc",
+      "label": "Sensualność / zmysłowość"
+    },
+    {
+      "id": "eksperyment",
+      "label": "Nietypowa forma / eksperyment"
+    },
+    {
+      "id": "scifi",
+      "label": "Science fiction"
+    },
+    {
+      "id": "przemiana",
+      "label": "Przemiana / transformacja postaci"
+    },
+    {
+      "id": "polityka",
+      "label": "Polityka / intryga"
+    },
+    {
+      "id": "romans",
+      "label": "Wątki romantyczne"
+    },
+    {
+      "id": "cialo",
+      "label": "Ekspresja ciałem / larp bez słów"
+    },
+    {
+      "id": "groza",
+      "label": "Groza / horror"
+    },
+    {
+      "id": "katastrofa",
+      "label": "Katastrofa / przetrwanie"
+    },
+    {
+      "id": "wojna_okupacja",
+      "label": "Wojna / okupacja"
+    },
+    {
+      "id": "wspolnota",
+      "label": "Umysł grupowy / wspólnota"
+    },
+    {
+      "id": "prl",
+      "label": "PRL / totalitaryzm"
+    },
+    {
+      "id": "oniryzm",
+      "label": "Oniryzm / surrealizm"
+    },
+    {
+      "id": "swiat_mroku",
+      "label": "Świat mroku"
+    },
+    {
+      "id": "cyberpunk",
+      "label": "Cyberpunk"
+    },
+    {
+      "id": "historia",
+      "label": "Klimat historyczny"
+    },
+    {
+      "id": "komedia",
+      "label": "Komedia"
+    },
+    {
+      "id": "reportaz",
+      "label": "Reportaż / dziennikarstwo"
+    },
+    {
+      "id": "walka",
+      "label": "Konflikt / walka"
+    },
+    {
+      "id": "wspolczesnosc",
+      "label": "Czasy współczesne"
+    },
+    {
+      "id": "napiecie",
+      "label": "Napięcie / akcja"
+    },
+    {
+      "id": "fantasy",
+      "label": "Fantasy"
+    },
+    {
+      "id": "realizm_osiedlowy",
+      "label": "Realizm osiedlowy / subkultury"
+    },
+    {
+      "id": "ekologia",
+      "label": "Ekologia / natura"
+    },
+    {
+      "id": "relacje",
+      "label": "Relacje i więzi"
+    },
+    {
+      "id": "refleksja",
+      "label": "Refleksja / filozofia"
+    }
   ],
-  "triggers": [
-    "Przemoc i brutalność",
-    "Śmierć i umieranie",
-    "Wojna",
-    "Krew i obrażenia ciała",
-    "Narkotyki i używki",
-    "Alkohol",
-    "Treści seksualne / zmysłowość",
-    "Bliski kontakt fizyczny",
-    "Wątki religijne / kult",
-    "Zdrowie psychiczne",
-    "Żałoba i strata bliskich",
-    "Dyskryminacja i wykluczenie",
-    "Izolacja i osamotnienie",
-    "Klaustrofobia",
-    "Ciemność",
-    "Lęk egzystencjalny / koniec świata"
+  "triggerGroups": [
+    {
+      "id": "smierc_zaloba",
+      "label": "Śmierć i żałoba",
+      "triggers": [
+        "Śmierć",
+        "Śmierć bliskiej osoby",
+        "Śmierć własna",
+        "Żałoba",
+        "Utrata dziecka",
+        "Choroba terminalna",
+        "AIDS"
+      ]
+    },
+    {
+      "id": "przemoc",
+      "label": "Przemoc",
+      "triggers": [
+        "Przemoc",
+        "Morderstwo / zabójstwo",
+        "Gore",
+        "Tortury",
+        "Przemoc fizyczna",
+        "Przemoc domowa",
+        "Przemoc psychiczna",
+        "Przemoc seksualna",
+        "Przemoc wobec zwierząt",
+        "Agresja",
+        "Broń palna",
+        "Zemsta",
+        "Wulgarny język"
+      ]
+    },
+    {
+      "id": "wojna",
+      "label": "Wojna",
+      "triggers": [
+        "Wojna",
+        "Ludobójstwo",
+        "Represje polityczne"
+      ]
+    },
+    {
+      "id": "zdrowie_psychiczne",
+      "label": "Zdrowie psychiczne i trauma",
+      "triggers": [
+        "Trauma / PTSD",
+        "Samobójstwo",
+        "Szaleństwo",
+        "Kryzys psychiczny",
+        "Pobyt w instytucjach psychiatrycznych",
+        "Derealizacja",
+        "Wyparcie",
+        "Strach",
+        "Bezsilność",
+        "Brak nadziei / celu",
+        "Dehumanizacja",
+        "Cierpienie",
+        "Samotność",
+        "Poczucie winy"
+      ]
+    },
+    {
+      "id": "relacje_zdrada",
+      "label": "Relacje i zdrada",
+      "triggers": [
+        "Zdrada",
+        "Toksyczne relacje",
+        "Manipulacja",
+        "Porzucenie / odrzucenie",
+        "Relacje patriarchalne",
+        "Dramaty rodzinne",
+        "Niepełna rodzina",
+        "Rozczarowania miłosne"
+      ]
+    },
+    {
+      "id": "dyskryminacja",
+      "label": "Dyskryminacja",
+      "triggers": [
+        "Rasizm",
+        "Dyskryminacja",
+        "Seksizm",
+        "Wykluczenie"
+      ]
+    },
+    {
+      "id": "substancje",
+      "label": "Substancje",
+      "triggers": [
+        "Alkohol / alkoholizm",
+        "Narkotyki / używki",
+        "Papierosy",
+        "Uzależnienia"
+      ]
+    },
+    {
+      "id": "seksualnosc_cielesnosc",
+      "label": "Treści seksualne i cielesne",
+      "triggers": [
+        "Bliskość fizyczna / dotyk",
+        "Treści erotyczne / zmysłowe",
+        "Ekspozycja ciała / bielizna",
+        "Pornografia",
+        "Prostytucja",
+        "Ciąża w niesprzyjających warunkach",
+        "Niechciana ciąża"
+      ]
+    },
+    {
+      "id": "religia_nadprzyrodzone",
+      "label": "Religia i nadprzyrodzone",
+      "triggers": [
+        "Religia",
+        "Okultyzm",
+        "Sekta",
+        "Duchy",
+        "Opętanie i utrata kontroli nad ciałem",
+        "Świętokradztwo",
+        "Zombie",
+        "Epidemia",
+        "Bunt maszyn"
+      ]
+    },
+    {
+      "id": "historia_polityka",
+      "label": "Historia i polityka",
+      "triggers": [
+        "Fakty historyczne",
+        "Zmiana władzy"
+      ]
+    },
+    {
+      "id": "sensoryka",
+      "label": "Ciemność i doznania sensoryczne",
+      "triggers": [
+        "Ciemność",
+        "Zmieniające się światło",
+        "Zmieniająca się muzyka",
+        "Krzyk"
+      ]
+    }
+  ],
+  "characterPreferences": ["Niebinarne", "Kobiece", "Męskie"],
+  "ticketTiers": [
+    { "id": "tworcy", "label": "Bilet dla Twórców (MG, opiekunów larpowych)", "price": "40 zł" },
+    { "id": "spoleczny", "label": "Bilet Społeczny", "price": "40 zł" },
+    { "id": "standardowy", "label": "Bilet Standardowy", "price": "100 zł" },
+    { "id": "wsparcia", "label": "Bilet Wsparcia", "price": "140 zł" }
   ],
   "timeslots": [
     {
@@ -42,9 +282,49 @@
       "name": "Piątek wieczór",
       "time": "18:00–22:00 (4h)",
       "larps": [
-        { "name": "La Candela", "players": 20, "tags": ["rytual", "emocje", "cialo"], "triggers": ["Bliski kontakt fizyczny"] },
-        { "name": "Ławnicy", "players": 10, "tags": ["wspolczesnosc", "napiecie", "emocje"], "triggers": ["Przemoc i brutalność", "Dyskryminacja i wykluczenie"] },
-        { "name": "Goodnight Miami", "players": 5, "tags": ["wspolczesnosc", "napiecie", "emocje"], "triggers": ["Przemoc i brutalność", "Narkotyki i używki"] }
+        {
+          "name": "Goodnight Miami",
+          "players": 5,
+          "tags": [
+            "groza"
+          ],
+          "triggers": [
+            "Śmierć",
+            "Samobójstwo",
+            "Śmierć bliskiej osoby",
+            "Epidemia",
+            "Ciemność",
+            "Zombie",
+            "Broń palna"
+          ]
+        },
+        {
+          "name": "La Candela",
+          "players": 32,
+          "tags": [
+            "taniec_ruch",
+            "cialo",
+            "emocje"
+          ],
+          "triggers": [
+            "Śmierć",
+            "Żałoba",
+            "Ciemność"
+          ]
+        },
+        {
+          "name": "Rękawiczki",
+          "players": 5,
+          "tags": [
+            "wojna_okupacja",
+            "trudne_wybory"
+          ],
+          "triggers": [
+            "Wojna",
+            "Morderstwo / zabójstwo",
+            "Represje polityczne"
+          ]
+        }
       ]
     },
     {
@@ -52,13 +332,123 @@
       "name": "Sobota rano",
       "time": "10:00–15:00 (5h)",
       "larps": [
-        { "name": "Better Love Story than Twilight", "players": 12, "tags": ["romans", "humor", "relacje"], "triggers": ["Treści seksualne / zmysłowość"] },
-        { "name": "(A)Gnosis", "players": 15, "tags": ["scifi", "refleksja", "cialo"], "triggers": ["Izolacja i osamotnienie", "Lęk egzystencjalny / koniec świata"] },
-        { "name": "Nie Nasza Wojna", "players": 12, "tags": ["walka", "emocje", "polityka"], "triggers": ["Wojna", "Śmierć i umieranie", "Żałoba i strata bliskich"] },
-        { "name": "Hipisi, pigułki i przytulanie", "players": 11, "tags": ["historia", "relacje", "romans"], "triggers": ["Narkotyki i używki", "Treści seksualne / zmysłowość", "Bliski kontakt fizyczny"] },
-        { "name": "Kult Bachusa i Astarte", "players": 6, "tags": ["rytual", "emocje", "historia"], "triggers": ["Wątki religijne / kult", "Treści seksualne / zmysłowość", "Bliski kontakt fizyczny"] },
-        { "name": "Rękawiczki", "players": 5, "tags": ["tajemnica", "relacje", "emocje"], "triggers": ["Zdrowie psychiczne"] },
-        { "name": "Avatar: Rozdroża", "players": 12, "tags": ["fantasy", "relacje", "emocje"], "triggers": ["Przemoc i brutalność", "Śmierć i umieranie"] }
+        {
+          "name": "Awatar: Rozdroża",
+          "players": 12,
+          "tags": [
+            "emocje",
+            "polityka",
+            "rytual",
+            "trudne_wybory"
+          ],
+          "triggers": [
+            "Śmierć bliskiej osoby",
+            "Porzucenie / odrzucenie",
+            "Ludobójstwo"
+          ]
+        },
+        {
+          "name": "Duży John",
+          "players": 13,
+          "tags": [
+            "cyberpunk",
+            "tajemnica"
+          ],
+          "triggers": [
+            "Bunt maszyn",
+            "Morderstwo / zabójstwo",
+            "Zdrada"
+          ]
+        },
+        {
+          "name": "Headline",
+          "players": 10,
+          "tags": [
+            "emocje",
+            "reportaz"
+          ],
+          "triggers": [
+            "Przemoc",
+            "Śmierć",
+            "Utrata dziecka",
+            "Bezsilność",
+            "Fakty historyczne"
+          ]
+        },
+        {
+          "name": "Kult Bachusa i Astarte",
+          "players": 6,
+          "tags": [
+            "rytual",
+            "wspolczesnosc",
+            "emocje",
+            "napiecie"
+          ],
+          "triggers": [
+            "Okultyzm",
+            "Szaleństwo",
+            "Strach",
+            "Zdrada",
+            "Ciemność"
+          ]
+        },
+        {
+          "name": "Ortalion",
+          "players": 16,
+          "tags": [
+            "realizm_osiedlowy",
+            "przemiana"
+          ],
+          "triggers": [
+            "Agresja",
+            "Seksizm",
+            "Toksyczne relacje",
+            "Zdrada",
+            "Narkotyki / używki",
+            "AIDS",
+            "Uzależnienia",
+            "Porzucenie / odrzucenie",
+            "Niepełna rodzina",
+            "Przemoc domowa",
+            "Alkohol / alkoholizm",
+            "Śmierć",
+            "Pornografia",
+            "Samobójstwo",
+            "Sekta",
+            "Przemoc seksualna"
+          ]
+        },
+        {
+          "name": "Shadows of the forgotten",
+          "players": 20,
+          "tags": [
+            "rytual",
+            "relacje",
+            "emocje"
+          ],
+          "triggers": [
+            "Morderstwo / zabójstwo",
+            "Śmierć",
+            "Samobójstwo",
+            "Relacje patriarchalne",
+            "Zdrada",
+            "Utrata dziecka",
+            "Niechciana ciąża",
+            "Zemsta"
+          ]
+        },
+        {
+          "name": "Sierpinsky 233",
+          "players": 20,
+          "tags": [
+            "scifi",
+            "prl"
+          ],
+          "triggers": [
+            "Dehumanizacja",
+            "Brak nadziei / celu"
+          ]
+        }
       ]
     },
     {
@@ -66,14 +456,144 @@
       "name": "Sobota wieczór",
       "time": "17:00–22:00 (5h)",
       "larps": [
-        { "name": "Star Wars - Cienie Pokoju", "players": 12, "tags": ["scifi", "polityka", "napiecie"], "triggers": ["Przemoc i brutalność", "Wojna"] },
-        { "name": "Drugi raz pierwszy raz", "players": 28, "tags": ["relacje", "emocje", "cialo"], "triggers": ["Żałoba i strata bliskich", "Bliski kontakt fizyczny"] },
-        { "name": "Nie ufaj tengu w onsenie yokai", "players": 25, "tags": ["fantasy", "humor", "rytual"], "triggers": ["Bliski kontakt fizyczny"] },
-        { "name": "River Tale", "players": 12, "tags": ["fantasy", "emocje", "relacje"], "triggers": ["Przemoc i brutalność", "Dyskryminacja i wykluczenie"] },
-        { "name": "Nienawistna Ósemka", "players": 8, "tags": ["napiecie", "walka", "tajemnica"], "triggers": ["Przemoc i brutalność", "Krew i obrażenia ciała", "Śmierć i umieranie"] },
-        { "name": "Old Friends", "players": 8, "tags": ["relacje", "emocje", "refleksja"], "triggers": ["Żałoba i strata bliskich"] },
-        { "name": "Heptameron, czyli siedem opowieści na koniec świata", "players": 7, "tags": ["refleksja", "emocje", "groza"], "triggers": ["Lęk egzystencjalny / koniec świata", "Śmierć i umieranie", "Żałoba i strata bliskich"] },
-        { "name": "Headline", "players": 10, "tags": ["wspolczesnosc", "polityka", "napiecie"], "triggers": ["Dyskryminacja i wykluczenie"] }
+        {
+          "name": "(A)Gnosis",
+          "players": 15,
+          "tags": [
+            "rytual",
+            "przemiana",
+            "oniryzm"
+          ],
+          "triggers": [
+            "Religia",
+            "Śmierć bliskiej osoby",
+            "Śmierć własna",
+            "Samotność",
+            "Derealizacja",
+            "Morderstwo / zabójstwo",
+            "Porzucenie / odrzucenie",
+            "Samobójstwo",
+            "Świętokradztwo"
+          ]
+        },
+        {
+          "name": "Better love story than Twilight",
+          "players": 12,
+          "tags": [
+            "swiat_mroku",
+            "romans"
+          ],
+          "triggers": [
+            "Toksyczne relacje",
+            "Manipulacja",
+            "Ciąża w niesprzyjających warunkach",
+            "Rasizm",
+            "Dyskryminacja"
+          ]
+        },
+        {
+          "name": "Drugi raz pierwszy raz",
+          "players": 28,
+          "tags": [
+            "taniec_ruch",
+            "romans",
+            "cialo",
+            "sensualnosc"
+          ],
+          "triggers": [
+            "Bliskość fizyczna / dotyk",
+            "Rozczarowania miłosne"
+          ]
+        },
+        {
+          "name": "Heptameron",
+          "players": 7,
+          "tags": [
+            "emocje",
+            "katastrofa"
+          ],
+          "triggers": [
+            "Trauma / PTSD",
+            "Wyparcie"
+          ]
+        },
+        {
+          "name": "Nie nasza wojna",
+          "players": 12,
+          "tags": [
+            "emocje",
+            "wojna_okupacja",
+            "fantasy"
+          ],
+          "triggers": [
+            "Przemoc",
+            "Zdrada",
+            "Wojna",
+            "Religia",
+            "Tortury",
+            "Rasizm",
+            "Dyskryminacja"
+          ]
+        },
+        {
+          "name": "Nie ufaj tengu w onsenie yokai",
+          "players": 16,
+          "tags": [
+            "sensualnosc",
+            "tajemnica",
+            "eksperyment",
+            "rytual"
+          ],
+          "triggers": [
+            "Ekspozycja ciała / bielizna"
+          ]
+        },
+        {
+          "name": "Star Wars: Cienie Pokoju",
+          "players": 12,
+          "tags": [
+            "polityka",
+            "scifi"
+          ],
+          "triggers": [
+            "Przemoc fizyczna",
+            "Manipulacja",
+            "Przemoc psychiczna",
+            "Zdrada",
+            "Trauma / PTSD",
+            "Toksyczne relacje"
+          ]
+        },
+        {
+          "name": "Voyager 3: wersja reżyserska",
+          "players": 8,
+          "tags": [
+            "scifi"
+          ],
+          "triggers": [
+            "Śmierć"
+          ]
+        },
+        {
+          "name": "Ławnicy",
+          "players": 10,
+          "tags": [
+            "emocje",
+            "tajemnica",
+            "prl"
+          ],
+          "triggers": [
+            "Śmierć",
+            "Morderstwo / zabójstwo",
+            "Gore",
+            "Narkotyki / używki",
+            "Papierosy",
+            "Alkohol / alkoholizm",
+            "Dramaty rodzinne",
+            "Rasizm",
+            "Dyskryminacja"
+          ]
+        }
       ]
     },
     {
@@ -81,12 +601,119 @@
       "name": "Niedziela rano",
       "time": "10:00–14:00 (4h)",
       "larps": [
-        { "name": "Ortalion", "players": 16, "tags": ["historia", "polityka", "relacje"], "triggers": ["Dyskryminacja i wykluczenie", "Alkohol"] },
-        { "name": "Rój", "players": 20, "tags": ["scifi", "groza", "napiecie"], "triggers": ["Izolacja i osamotnienie", "Lęk egzystencjalny / koniec świata"] },
-        { "name": "Shadows of the Forgotten", "players": 20, "tags": ["fantasy", "groza", "tajemnica"], "triggers": ["Ciemność", "Śmierć i umieranie", "Lęk egzystencjalny / koniec świata"] },
-        { "name": "Duży John", "players": 13, "tags": ["napiecie", "walka", "tajemnica"], "triggers": ["Przemoc i brutalność", "Śmierć i umieranie"] },
-        { "name": "Voyager 3: wersja reżyserska", "players": 8, "tags": ["scifi", "refleksja", "emocje"], "triggers": ["Izolacja i osamotnienie", "Klaustrofobia", "Lęk egzystencjalny / koniec świata"] },
-        { "name": "Gra ludowa (Народная гульня)", "players": 14, "tags": ["rytual", "relacje", "historia"], "triggers": ["Wątki religijne / kult"] }
+        {
+          "name": "Gra ludowa",
+          "players": 14,
+          "tags": [
+            "eksperyment",
+            "historia",
+            "komedia"
+          ],
+          "triggers": [
+            "Wojna",
+            "Represje polityczne",
+            "Zmiana władzy",
+            "Prostytucja",
+            "Alkohol / alkoholizm"
+          ]
+        },
+        {
+          "name": "Hipisi, pigułki i przytulanie",
+          "players": 11,
+          "tags": [
+            "rytual",
+            "walka",
+            "sensualnosc"
+          ],
+          "triggers": [
+            "Przemoc",
+            "Śmierć",
+            "Samobójstwo",
+            "Trauma / PTSD"
+          ]
+        },
+        {
+          "name": "Na Dzień Świętego Kryspina!",
+          "players": 20,
+          "tags": [
+            "eksperyment",
+            "emocje"
+          ],
+          "triggers": [
+            "Śmierć",
+            "Przemoc",
+            "Fakty historyczne",
+            "Religia"
+          ]
+        },
+        {
+          "name": "Nienawistna Ósemka",
+          "players": 8,
+          "tags": [
+            "tajemnica"
+          ],
+          "triggers": [
+            "Przemoc",
+            "Rasizm",
+            "Dyskryminacja",
+            "Wulgarny język",
+            "Narkotyki / używki"
+          ]
+        },
+        {
+          "name": "River Tale czyli są w zwierzyńcu rachunki krzywd",
+          "players": 12,
+          "tags": [
+            "trudne_wybory",
+            "katastrofa"
+          ],
+          "triggers": [
+            "Śmierć",
+            "Rasizm",
+            "Dyskryminacja",
+            "Cierpienie",
+            "Przemoc wobec zwierząt"
+          ]
+        },
+        {
+          "name": "Rój",
+          "players": 22,
+          "tags": [
+            "taniec_ruch",
+            "wspolnota",
+            "ekologia"
+          ],
+          "triggers": [
+            "Bliskość fizyczna / dotyk",
+            "Treści erotyczne / zmysłowe",
+            "Zmieniające się światło",
+            "Zmieniająca się muzyka",
+            "Wykluczenie"
+          ]
+        },
+        {
+          "name": "Starzy Przyjaciele",
+          "players": 8,
+          "tags": [
+            "groza",
+            "emocje",
+            "wspolnota"
+          ],
+          "triggers": [
+            "Duchy",
+            "Żałoba",
+            "Poczucie winy",
+            "Morderstwo / zabójstwo",
+            "Choroba terminalna",
+            "Kryzys psychiczny",
+            "Pobyt w instytucjach psychiatrycznych",
+            "Uzależnienia",
+            "Toksyczne relacje",
+            "Zdrada",
+            "Opętanie i utrata kontroli nad ciałem",
+            "Krzyk"
+          ]
+        }
       ]
     }
   ]

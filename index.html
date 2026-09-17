@@ -10,12 +10,15 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="masthead">
+    <img src="assets/krakon-logo.svg" alt="Krak-ON" class="masthead-logo" />
+    <div id="draft-badge" class="draft-badge" role="status" aria-live="polite" hidden></div>
+  </div>
   <main class="wrap">
     <header>
       <h1 id="event-name">Zapisy na larpy</h1>
-      <p class="intro">
-        Nie musisz znać larpów z programu. Zaznacz, co lubisz, a my pokażemy Ci,
-        co najbardziej do Ciebie pasuje w każdym slocie czasowym.
+      <p class="intro" id="intro-text">
+        Pełne opisy larpów i harmonogram festiwalu znajdziesz na stronie wydarzenia.
       </p>
     </header>
 
@@ -24,12 +27,41 @@
       <section class="card">
         <h2>Kto się zapisuje</h2>
         <div class="q">
-          <label class="q-label" for="name">Imię lub ksywka <span class="req">*</span></label>
-          <input type="text" id="name" autocomplete="nickname" />
+          <label class="q-label" for="first-name">Imię <span class="req">*</span></label>
+          <input type="text" id="first-name" autocomplete="given-name" aria-describedby="first-name-error" />
+          <p class="field-error" id="first-name-error" aria-live="polite"></p>
         </div>
         <div class="q">
-          <label class="q-label" for="email">E-mail (opcjonalnie, do kontaktu)</label>
-          <input type="email" id="email" autocomplete="email" />
+          <label class="q-label" for="last-name">Nazwisko <span class="req">*</span></label>
+          <input type="text" id="last-name" autocomplete="family-name" aria-describedby="last-name-error" />
+          <p class="field-error" id="last-name-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" for="preferred-address">Jak się do Ciebie zwracać <span class="req">*</span></label>
+          <input type="text" id="preferred-address" aria-describedby="preferred-address-error" />
+          <p class="field-error" id="preferred-address-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" for="email">E-mail <span class="req">*</span></label>
+          <input type="email" id="email" autocomplete="email" aria-describedby="email-error" />
+          <p class="field-error" id="email-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" for="phone">Numer telefonu <span class="req">*</span></label>
+          <input type="tel" id="phone" autocomplete="tel" aria-describedby="phone-hint phone-error" />
+          <p class="blurb" id="phone-hint">Wyłącznie na sytuacje awaryjne podczas wydarzenia — nie wysyłamy SMS-ów.</p>
+          <p class="field-error" id="phone-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" for="birthdate">Data urodzenia <span class="req">*</span></label>
+          <input type="date" id="birthdate" autocomplete="bday" aria-describedby="birthdate-hint birthdate-error" />
+          <p class="blurb" id="birthdate-hint">Wydarzenie jest 18+; data urodzenia służy tylko do weryfikacji wieku.</p>
+          <p class="field-error" id="birthdate-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" id="char-prefs-label">Jakie postaci chcesz grać? <span class="req">*</span></label>
+          <div id="char-prefs" class="trigger-grid" role="group" aria-labelledby="char-prefs-label" aria-describedby="char-prefs-error"></div>
+          <p class="field-error" id="char-prefs-error" aria-live="polite"></p>
         </div>
       </section>
 
@@ -44,8 +76,8 @@
       <!-- 2. Triggery -->
       <section class="card">
         <h2>2. Triggery</h2>
-        <p class="blurb">Zaznacz te, które Cię dotyczą. Larpy, które je zawierają, zostaną wyróżnione poniżej.</p>
-        <div id="triggers" class="trigger-grid"></div>
+        <p class="blurb">Rozwiń kategorię i zaznacz te, które Cię dotyczą. Larpy, które je zawierają, zostaną wyróżnione poniżej.</p>
+        <div id="triggers"></div>
       </section>
 
       <!-- 3. Sloty czasowe -->
@@ -53,11 +85,58 @@
         <h2>3. Twoje wybory w slotach</h2>
         <p class="blurb">
           W każdym slocie kliknij <strong>+ Dodaj</strong>, by wybrać larp (do 4).
-          Wybrane trafiają na listę „Twoje wybory”, gdzie ustawisz kolejność (▲ ▼)
-          lub usuniesz (✕). Lista poniżej jest ułożona od najlepiej dopasowanych.
-          Procent to dopasowanie do Twoich preferencji, a <strong>pogrubione</strong> hasła to triggery danej gry.
+          Wybrane trafiają na listę „Twoje wybory”, gdzie ustawisz kolejność (▲ ▼),
+          wybierzesz <strong>bilet</strong> dla każdej gry, lub usuniesz (✕). Lista poniżej
+          jest ułożona od najlepiej dopasowanych. Procent to dopasowanie do Twoich
+          preferencji, a <strong>pogrubione</strong> hasła to triggery danej gry.
         </p>
         <div id="slots"></div>
+      </section>
+
+      <!-- Złoty Bilet -->
+      <section class="card">
+        <h2>Złoty Bilet</h2>
+        <p class="blurb">
+          Nieobowiązkowe, opcja tymczasowa na ten sezon. Jeśli masz Złoty Bilet,
+          wybierz do 3 larpów w kolejności, na który chciał*byś go wykorzystać —
+          ekipa spróbuje przydzielić Ci pierwszy z listy, który da się jeszcze obsadzić.
+        </p>
+        <div class="q">
+          <label class="q-label" for="golden-ticket-1">1. wybór</label>
+          <select id="golden-ticket-1"></select>
+        </div>
+        <div class="q">
+          <label class="q-label" for="golden-ticket-2">2. wybór</label>
+          <select id="golden-ticket-2"></select>
+        </div>
+        <div class="q">
+          <label class="q-label" for="golden-ticket-3">3. wybór</label>
+          <select id="golden-ticket-3"></select>
+        </div>
+      </section>
+
+      <!-- NPC -->
+      <section class="card">
+        <h2>NPC</h2>
+        <p class="blurb">Nieobowiązkowe.</p>
+        <label class="checkline">
+          <input type="checkbox" id="wants-npc" />
+          <span>Chcę też zgłosić się jako NPC (postać niegrywalna / wsparcie ekipy)</span>
+        </label>
+      </section>
+
+      <!-- Afterparty -->
+      <section class="card">
+        <h2>Afterparty</h2>
+        <p class="blurb">Nieobowiązkowe — pomaga nam zaplanować przestrzeń.</p>
+        <label class="checkline">
+          <input type="checkbox" id="after-friday" />
+          <span>Chcę wziąć udział w afterparty w piątek</span>
+        </label>
+        <label class="checkline">
+          <input type="checkbox" id="after-saturday" />
+          <span>Chcę wziąć udział w afterparty w sobotę</span>
+        </label>
       </section>
 
       <!-- RODO -->
@@ -74,10 +153,24 @@
           </p>
         </details>
         <label class="checkline required-line">
-          <input type="checkbox" id="consent" required />
+          <input type="checkbox" id="consent" required aria-describedby="consent-error" />
           <span>Przeczytał*m powyższe i zgadzam się na przechowywanie oraz wykorzystanie
             moich odpowiedzi do przydziału ról na tym wydarzeniu. *</span>
         </label>
+        <label class="checkline required-line">
+          <input type="checkbox" id="consent-rules" required aria-describedby="consent-error" />
+          <span id="consent-rules-text">Zapoznał*m się z regulaminem wydarzenia. *</span>
+        </label>
+        <label class="checkline">
+          <input type="checkbox" id="consent-photo" />
+          <span>Wyrażam zgodę na fotografowanie i/lub nagrywanie mojego wizerunku w celach
+            promocyjnych i marketingowych wydarzenia (nieobowiązkowe).</span>
+        </label>
+        <label class="checkline">
+          <input type="checkbox" id="consent-marketing" />
+          <span>Chcę otrzymywać informacje o wydarzeniu drogą mailową (nieobowiązkowe).</span>
+        </label>
+        <p class="field-error" id="consent-error" aria-live="polite"></p>
       </section>
 
       <div class="actions">

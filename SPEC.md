@@ -1,9 +1,15 @@
 # Functional Specification — LARP Sign-On Form
 
-Status: living document, updated 2026-09-08 for the Apps Script backend
-migration and a shared-secret hardening pass. This describes what the code
-*does* — for what's actually deployed right now vs. just built and tested,
-see `DESIGN.md` §10.
+Status: living document, updated 2026-09-18: `larps.json`'s `preferenceTags`
+and triggers were rebuilt from Krak-ON's real programme data (26 real larps,
+replacing the earlier placeholder/guessed content), with tags/triggers
+unified from ~90/~93 raw variants down to 31 tags and 75 triggers grouped
+into 11 collapsible categories — see §3. A "zapisz i wróć później" draft
+autosave (localStorage) was also added — see §6a. Same day: an NPC-interest
+checkbox and a temporary "Złoty Bilet" (Golden Ticket) priority picker were
+added — see §2 items 1/5 and §6, `schemaVersion` bumped to 4. This describes
+what the code *does* — for what's actually deployed right now vs. just built
+and tested, see `DESIGN.md` §10.
 Scope: what the system does and the rules it follows. For *how it's built and why*, see `DESIGN.md`.
 
 ## 1. Purpose
@@ -15,18 +21,42 @@ can pick their top choices per slot without prior knowledge of the games.
 
 ## 2. User flow
 
-1. **Kto się zapisuje** — nickname (required) + optional email.
+1. **Kto się zapisuje** — first name, last name, preferred form of address,
+   email, and phone number (all required); birthdate (required, for 18+
+   verification); which character genders the player is willing to play,
+   ticked from `larps.json → characterPreferences` (at least one required);
+   an optional "chcę zgłosić się jako NPC" checkbox.
 2. **Preferencje** — rate every `preferenceTags` entry on a 5-point scale, −2..+2:
    `Nie znoszę / Raczej nie / Obojętne / Lubię / Uwielbiam`. Defaults to 0 (neutral).
-3. **Triggery** — tick any number of triggers from `larps.json → triggers` that
-   affect the player (yes/no, no severity).
+3. **Triggery** — tick any number of triggers from `larps.json → triggerGroups`,
+   presented as 11 collapsible categories (e.g. "Przemoc", "Zdrowie psychiczne
+   i trauma") rather than one flat list — 75 triggers is too many to scan
+   un-grouped. A collapsed category shows up to 3 of its checked trigger names
+   plus a "+N" overflow count, so a player never has to reopen a category to
+   remember what they ticked there.
 4. **Sloty** — for each of the 4 timeslots (fixed in `larps.json`), larps are listed
    under "Pozostałe" sorted by descending match %. The player adds up to **4 per
    slot** into a "Twoje wybory" tray, where order is priority (drag via ▲/▼,
-   remove via ✕). Adding/removing re-sorts the remaining list live.
-5. **Prywatność i zgoda** — GDPR notice (controller, purpose, retention, storage
-   location) rendered from `config.js`, plus a required consent checkbox.
-6. Submit — see §6.
+   remove via ✕), and picks a **ticket tier** (required) from
+   `larps.json → ticketTiers` for each picked larp. Adding/removing re-sorts
+   the remaining list live.
+5. **Złoty Bilet** — optional, explicitly a temporary feature ("opcja
+   tymczasowa na ten sezon" in its own blurb). Three fixed-priority
+   `<select>`s (1st/2nd/3rd choice), each listing every larp across all 4
+   slots flattened together — independent of the player's own slot picks in
+   §4. Not a drag-reorder tray like §4: three fixed dropdowns is enough
+   structure for "which larp, in priority order, do you want to redeem your
+   one Golden Ticket on" without the complexity a full picker would add for
+   a single-use, likely-short-lived mechanic. No duplicate-prevention across
+   the three selects — picking the same larp twice is harmless, the
+   organiser just reads it as one choice.
+6. **Afterparty** — optional yes/no interest for the Friday and Saturday
+   afterparty, independent of slot picks.
+7. **Prywatność i zgoda** — GDPR notice (controller, purpose, retention, storage
+   location) rendered from `config.js`, plus four consent lines: general data
+   processing and rules-read (required), and photo/video use and a
+   marketing-email opt-in (both optional).
+8. Submit — see §6.
 
 Changing any preference rating or trigger checkbox live-recomputes match % and
 re-sorts every slot (`change` listener on the form, §5).
@@ -35,15 +65,22 @@ re-sorts every slot (`change` listener on the form, §5).
 
 ```jsonc
 {
-  "preferenceTags": [{ "id": "scifi", "label": "Science fiction" }, ...],
-  "triggers": ["Przemoc i brutalność", ...],
+  "preferenceTags": [{ "id": "scifi", "label": "Science fiction" }, ...],   // 31 tags
+  "triggerGroups": [
+    { "id": "przemoc", "label": "Przemoc", "triggers": ["Przemoc", "Gore", ...] }
+    // 11 groups, 75 triggers total
+  ],
+  "characterPreferences": ["Niebinarne", "Kobiece", "Męskie"],
+  "ticketTiers": [
+    { "id": "wsparcia", "label": "Bilet Wsparcia", "price": "140 zł" }
+  ],
   "timeslots": [
     {
       "id": "pt_wieczor", "name": "Piątek wieczór", "time": "18:00–22:00 (4h)",
       "larps": [
-        { "name": "La Candela", "players": 20,
-          "tags": ["rytual", "emocje", "cialo"],
-          "triggers": ["Bliski kontakt fizyczny"] }
+        { "name": "La Candela", "players": 32,
+          "tags": ["taniec_ruch", "cialo", "emocje"],
+          "triggers": ["Śmierć", "Żałoba", "Ciemność"] }
       ]
     }
   ]
@@ -51,13 +88,27 @@ re-sorts every slot (`change` listener on the form, §5).
 ```
 
 - `preferenceTags[].id` is the join key used by `larps[].tags`.
-- `triggers` is a flat string catalogue; `larps[].triggers` values must match a
-  string in it verbatim (no id indirection).
+- `triggerGroups[].triggers` is a flat string catalogue *within* each group,
+  purely for the collapsible-category UI (§2); `larps[].triggers` is a flat
+  array of trigger strings (no group indirection) that must match one of
+  those strings verbatim — matching/highlighting logic (`getTriggers()`,
+  `triggersHTML()`) works exactly as it did with the old flat `triggers` list,
+  unaware groups exist. Only the *catalogue's* rendering is grouped.
 - `larps[].players` (headcount / capacity) is captured but **not currently used**
   by any matching, sorting, or limit logic — see `DESIGN.md` §6 (Known gaps).
-- Currently 4 timeslots, each with a fixed hand-authored larp list. The file's
-  `_note` field flags that tags/triggers are an early, partly-inferred draft
-  pending GM confirmation — treat content (not schema) as provisional.
+- `characterPreferences` is a flat string catalogue (like the old `triggers`),
+  rendered as a checkbox group; the player's ticks are collected but not
+  joined against any per-larp data — it's informational for casting, not
+  part of matching.
+- `ticketTiers[]` is `{ id, label, price }`; `id` is the join key used by each
+  slot pick's `ticketTier` in the submission (§6). Price is a display string,
+  not a machine-parsed amount — this system has no payment processing; ticket
+  choice is informational for the organiser same as everything else.
+- Currently 4 timeslots holding Krak-ON's real 2026 programme (26 larps) —
+  `preferenceTags` and `triggerGroups` were unified together with the
+  organiser from that event's actual per-larp tag/trigger data (`_note`
+  records the source and date), not guessed from titles. `players` is each
+  larp's max headcount from the organiser's sheet.
 
 ## 4. Matching algorithm
 
@@ -92,6 +143,9 @@ priority order, not match %.
 - A larp already picked in a slot cannot be re-added; disabled `+ Dodaj` once
   the slot tray hits 4.
 - Reordering is via ▲/▼ (swap with neighbor); ✕ removes and reflows.
+- Each pick carries its own **ticket tier** (`selections[slotId][i].ticketTier`,
+  a `ticketTiers[].id`), chosen from a `<select>` in the tray item. Unset by
+  default; submit is blocked until every current pick has one (§6).
 - No cross-slot exclusivity — a player may pick larps that would clock-conflict
   outside this tool; the sign-on has no concept of "you can only attend one
   slot's worth of larps across the whole festival" beyond the per-slot cap.
@@ -99,18 +153,52 @@ priority order, not match %.
 ## 6. Validation & submission
 
 **Client-side validation** (`validate()`, blocks submit until satisfied):
-- Nickname non-empty.
-- Consent checkbox checked.
-No validation requires *any* slot picks, ratings, or triggers — an all-neutral,
-all-empty submission is technically valid as long as name + consent are present.
+- First name, last name, preferred address, email (format-checked via the
+  input's own `checkValidity()`, not just non-empty), phone, and birthdate
+  all non-empty.
+- At least one `characterPreferences` checkbox ticked.
+- General consent and rules-read consent both checked (`photoVideo` and
+  `marketingEmail` are optional consents — unchecked is a valid `false` for
+  either).
+- Every current slot pick has a `ticketTier` selected (checked per slot, in
+  tray-item DOM order — see `DESIGN.md` §6 for why by-position, not by-name).
 
-**Submission payload** (`schemaVersion: 2`):
+**Validation timing**: each required field/group gets its own inline message
+(a `<p class="field-error">`, `aria-describedby`-linked to its control) rather
+than relying solely on the one bottom-of-form status line. A field only shows
+its error once the player has *touched* it — first `blur` for text/date/tel
+inputs, first `change` for the checkbox groups and ticket `<select>`s — so an
+untouched, empty required field stays neutral on page load rather than
+greeting the player with a wall of red. Once touched (or once a submit has
+been attempted, which marks every field touched at once), the message updates
+live on every further `input`/`change`, disappearing the moment the field
+becomes valid. Re-rendering the slots list (add/remove/reorder a pick) rebuilds
+its DOM from scratch, which would otherwise silently drop a showing ticket
+error — `revalidateTickets()` re-applies it immediately after, but only once
+a submit has already been attempted, keeping the same "don't shame early"
+rule consistent across re-renders.
+No validation requires *any* slot picks, ratings, or triggers themselves — a
+player who adds zero larps to any slot can still submit, as long as the
+identity/consent fields above are satisfied (a pick, once added, does require
+its ticket tier).
+
+**Submission payload** (`schemaVersion: 4`):
 
 ```jsonc
 {
-  "meta": { "event", "submittedAt" /* ISO */, "schemaVersion": 2 },
-  "identity": { "name", "email" },
-  "consent": { "given": true, "timestamp" /* ISO */ },
+  "meta": { "event", "submittedAt" /* ISO */, "schemaVersion": 4 },
+  "identity": {
+    "firstName", "lastName", "preferredAddress", "email", "phone",
+    "birthdate" // "YYYY-MM-DD" from <input type=date>, no auto age-check
+  },
+  "characterPreferences": ["<characterPreferences string>", ...],
+  "wantsNpc": false,
+  "goldenTicket": { "priorities": ["<larp name>", ...] },  // 0-3 entries, empty selects dropped, order preserved
+  "afterparty": { "friday": true, "saturday": false },
+  "consent": {
+    "given": true, "rulesRead": true, "photoVideo": true,
+    "marketingEmail": false, "timestamp" /* ISO */
+  },
   "preferences": { "<tagId>": -2..2, ... },       // every tag, defaults included
   "triggers": ["<trigger string>", ...],           // only the ticked ones
   "choices": {
@@ -118,6 +206,7 @@ all-empty submission is technically valid as long as name + consent are present.
       {
         "priority": 1,                             // 1-based, matches tray order
         "name": "<larp name>",
+        "ticketTier": "<ticketTiers[].id>",         // null only if collected pre-validation
         "likeliness": 83,                           // match % at submit time
         "triggerConflicts": ["<trigger string>", ...],
         "dislikes": ["<tag label>", ...]             // -2-rated tags on this larp
@@ -146,6 +235,35 @@ all-empty submission is technically valid as long as name + consent are present.
 "Pobierz moje odpowiedzi" (download) is always available regardless of
 `submitEndpoint`, independent of submit — lets a player keep/backup their
 answers or hand-deliver the file if the network path fails.
+
+## 6a. Draft autosave ("zapisz i wróć później")
+
+The whole form autosaves to `localStorage` (key `larpsign:draft:v1`) on every
+`input`/`change`, debounced ~600ms, with no manual save button — a button can
+be forgotten right before an accidental tab close; autosave can't be. On page
+load, a saved draft (if any) restores identity fields, ratings, triggers,
+character preferences, the NPC checkbox, Golden Ticket priorities, slot picks
++ ticket tiers, and afterparty choices before `renderSlots()` runs.
+
+**Deliberately excluded from save/restore**: the consent checkboxes (general,
+rules-read, photo/video, marketing). A returning player re-confirms consent
+explicitly rather than inheriting a stale, un-reviewed agreement.
+
+**Visible feedback**: a small fixed badge, top-right corner (`#draft-badge`),
+hidden until a draft exists. It reads "Zachowano dane · HH:MM" after any
+autosave, or the same text using the saved timestamp on restore — one visual
+language for both "just saved" and "restored from earlier," no separate
+"restored" message. There is no manual clear/reset control; the draft clears
+itself automatically on successful submission (both the real backend path and
+the local-download fallback), so a later visit never tries to restore an
+already-submitted form.
+
+**Defensive handling**: storage access is probed once at load (`draftStorage()`)
+and every read/write is wrapped in `try`/`catch` — private browsing, storage
+quota, or a corrupted stored value all degrade to "autosave silently does
+nothing" rather than breaking the page. Restoring also drops any saved pick
+whose slot or larp no longer exists in the current `larps.json` (content may
+have changed since the draft was saved).
 
 ## 7. Backend contract (Google Apps Script Web App, `Code.gs` in the
    [`larpsign-backend`](https://github.com/Gandi24/larpsign-backend) repo)
@@ -197,12 +315,26 @@ answers or hand-deliver the file if the network path fails.
 ## 8. GDPR / privacy requirements
 
 - **Lawful basis**: explicit opt-in consent, checkbox required, timestamped
-  and stored with every submission.
+  and stored with every submission. One further required consent,
+  `rulesRead` (having read the event rules), is collected separately for its
+  own distinct purpose. `photoVideo` (promotional photo/video use) and
+  `marketingEmail` are both optional opt-ins — unchecked is a valid `false`,
+  registration doesn't depend on either. Keeping all of these as separate
+  booleans (rather than folding them into the one general `consent.given`)
+  matters because photo/video use in particular is a distinct purpose under
+  GDPR from processing data for casting — being its own optional field (not
+  bundled into the required registration consent) is itself the correct GDPR
+  posture: consent for a distinct purpose must be freely given, separable,
+  and not a condition of using the service.
 - **Transparency**: privacy notice rendered from `config.js.controller` /
   `retention` / `processorNote` before consent; a `<details>` block explains
-  data-subject rights (access, rectification, erasure) in Polish.
-- **Data minimization**: only nickname is mandatory; email optional; no other
-  PII collected.
+  data-subject rights (access, rectification, erasure) in Polish. If
+  `config.js.rulesUrl` is set, the rules-read consent links to it.
+- **Data minimization**: name, email, phone, and birthdate are all mandatory
+  — a wider set than the original nickname-only design, adopted to match a
+  real festival's actual needs (emergency contact, 18+ verification for
+  legally-required age-gating). No further PII beyond what's in this spec is
+  collected.
 - **Storage location disclosure**: `processorNote` names Google LLC (USA, the
   Apps Script relay — data transits but is not persisted there) and GitHub
   Inc. (USA, the actual storage) as processors — must stay accurate if either

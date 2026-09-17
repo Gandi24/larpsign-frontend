@@ -127,28 +127,68 @@ have to recompute themselves.
 
 - `data` — the fetched `larps.json`, loaded once at `init()`, treated as
   read-only for the session.
-- `selections` — `{ slotId: [larpName, ...] }`, the only mutable app state,
-  holding picks in priority order (array position = priority). This is the
-  single source of truth for the "Twoje wybory" tray.
+- `selections` — `{ slotId: [{ name, ticketTier }, ...] }`, the only mutable
+  app state, holding picks in priority order (array position = priority).
+  This is the single source of truth for the "Twoje wybory" tray. `validate()`
+  checks each pick's `ticketTier` by DOM position (`.ticket-select` elements
+  in tray order), not by re-querying with the larp name as a selector value —
+  deliberately, since larp names can contain characters (parens, quotes) that
+  would need escaping in an attribute selector otherwise.
 - Ratings and triggers are **not** mirrored into JS state — they're read
   live from the DOM (`getRatings()`, `getTriggers()`) whenever needed. This
   means the DOM *is* the source of truth for those two, and `selections` is
   the only thing kept outside it.
 - Render pattern: any state change calls the relevant `render*()` function,
   which does a full `innerHTML` replace of its container (no diffing, no
-  virtual DOM, no component framework). At this data volume (4 slots, ~30
-  larps, 16 tags, 16 triggers) full re-render is cheap enough that this is a
-  reasonable, low-complexity choice rather than a limitation to fix.
+  virtual DOM, no component framework). At this data volume (4 slots, 26
+  larps, 31 tags, 75 triggers across 11 groups) full re-render is cheap
+  enough that this is a reasonable, low-complexity choice rather than a
+  limitation to fix.
 - `larpByName(slot, name)` — larps are looked up **by name string**, not id.
   This is a latent footgun: two larps with the same name in the same slot
   would collide in `selections`. Fine today (all names are unique per slot in
   `larps.json`), but if that invariant is ever violated, picks/removal would
   silently misbehave. Worth an `id` field if the content set grows or is
   edited by non-engineers.
+- `touched` (a `Set` of field ids) and `submitAttempted` (a bool) — the state
+  behind "don't shame an empty required field before the player has reached
+  it." The form has `novalidate`, so the browser's own validation bubbles
+  never appear; `fieldMessage()`/`setFieldError()` render the same information
+  as an inline `<p class="field-error">` instead, deliberately, because a
+  native bubble can't be middle-ground-styled to match the rest of the page
+  and disappears on its own timing, not the page's. A field only starts
+  showing a live error after its first `blur` (text/date/tel) or `change`
+  (checkbox groups, ticket `<select>`s) — checked against `touched`, not
+  against whether the field is currently empty — so tabbing through the form
+  without typing anything doesn't light up in red immediately behind the
+  cursor. `validate()` (run on submit) treats every field as touched at once,
+  which is also what flips `submitAttempted`, so any later slot-list
+  re-render (add/remove/reorder) knows to keep re-showing ticket errors via
+  `revalidateTickets()` instead of going silent just because the DOM under it
+  was rebuilt.
 - `submit-outcome.js` deliberately sits *outside* this state entirely — it's
   a pure function of a parsed response body, loaded as its own `<script>` tag
   before `app.js` so it can be `require()`d directly by Node tests without
   pulling in `window`/`document` (see §7).
+- `storage` (a `localStorage` handle, or `null` if unavailable) backs the
+  draft-autosave feature (`SPEC.md` §6a). It's probed once (`draftStorage()`)
+  rather than assumed present, because `localStorage` throws synchronously in
+  private-browsing contexts in some browsers — a thrown probe just means
+  autosave silently does nothing, never a broken page. Deliberately **not**
+  a manual "Save" button: a button is exactly the thing someone forgets to
+  click right before an accidental tab close, so every `input`/`change` on
+  the form schedules a debounced (~600ms) write instead, plus an explicit
+  `scheduleSave()` call after `onSlotAction` (button clicks on the tray don't
+  fire `input`/`change` on the form the way a text field or checkbox does).
+  Consent checkboxes are excluded from the saved/restored shape on purpose —
+  a returning player re-confirms consent rather than inheriting it silently.
+  The visible feedback is a single small fixed badge (`#draft-badge`, top-right,
+  hidden until a draft exists) rather than a page-width bar: the first version
+  of this was a sticky top banner with a "Zacznij od nowa" reset button, but
+  that read as more prominent than the feature warranted for something this
+  low-stakes, and a manual reset control wasn't wanted at all — the draft
+  already clears itself on successful submit, which is the only "reset" this
+  needs.
 
 ## 7. Known gaps / deliberately deferred
 
@@ -242,17 +282,41 @@ session doesn't have to rediscover them by reading code:
   and meaningfully increases the maintainer's GDPR processor/controller
   responsibility across every event using it. Recorded here so a future
   session doesn't have to rediscover this reasoning from scratch.
-- **Content accuracy.** `larps.json._note` flags that per-larp `tags`/
-  `triggers` are an early, partly-inferred draft (from titles/authors/format),
-  not GM-confirmed. Matching quality is only as good as this data — treat low
-  match-confidence content as a data-entry task, not a code task.
+- **Ticket tiers are informational only, no payment processing.** `ticketTiers`
+  (added modeling a reference festival's Google Form) captures which tier a
+  player intends to buy per pick — it does not charge anyone, check inventory,
+  or enforce the reference form's own rule that Social-ticket availability is
+  capped by how many Support tickets were bought. If a real event needs that,
+  it's a manual reconciliation the organiser does from submitted data, same
+  as capacity (`players`, above) — not logic this form implements.
+- **Content is now real, not guessed — but the tag/trigger vocabulary is a
+  curated unification, not a raw import.** As of 2026-09-18, `larps.json`
+  holds Krak-ON's actual 2026 programme (26 larps) with real per-larp
+  tags/triggers from the organiser's own sheet — no longer titles/authors
+  guesses. That sheet's raw vocabulary was ~90 tags and ~93 triggers, almost
+  all used by only one larp (a folksonomy, not a rating scale). `preferenceTags`
+  (31) and `triggerGroups` (11 groups, 75 triggers) are a manual unification
+  done together with the organiser — merging near-duplicates, splitting
+  compound raw values (e.g. `rasizm/dyskryminacja` → two separate triggers),
+  dropping ~20 items judged too narrow/branded to be a reusable category
+  (media references like `Wiedźmin`/`tarantino`, pure logistics/prop notes
+  like `wymagane czarne/ciemne`). The generation script and full raw→final
+  mapping are checked in at `.scratch/2026-krakon-tag-trigger-unification/`
+  as a reference for redoing this process for a future event's programme —
+  it won't just re-run against new data, see that folder's own README for
+  why and what to do instead. The source CSV itself was never committed;
+  it carried real GMs' emails/phones/Discord handles.
+- **Character-preference and consent-marketing state is a folksonomy risk in
+  miniature, but small enough not to need the tag treatment above.**
+  `characterPreferences` stayed a flat 3-item list; no unification was needed
+  at this scale.
 
 ## 8. Extension points (where to make common changes)
 
 | Change | Where |
 |---|---|
-| Add/edit larps, timeslots, tags, triggers | `larps.json` only |
-| Event name, retention text, controller contact, endpoint URL | `config.js` only |
+| Add/edit larps, timeslots, tags, triggers, character preferences, ticket tiers | `larps.json` only |
+| Event name, retention text, controller contact, rules link, endpoint URL | `config.js` only |
 | Change match % formula or scale bands | `likeliness()` / `likeLabel()` in `app.js` |
 | Change max picks per slot | `MAX_PICKS` in `app.js` |
 | Change submission schema | `collect()` in `app.js` **and** update `SPEC.md` §6 + bump `schemaVersion` |
@@ -260,6 +324,7 @@ session doesn't have to rediscover them by reading code:
 | Change the submit request/response contract | keep `submit-outcome.js` here and `buildSubmissionRequest()` in `larpsign-backend`'s `Code.gs` in sync — see §3, and update both repos |
 | Add a results-review/casting tool | a script reading the cloned private submissions repo locally — see §7 |
 | Visual restyle | `styles.css` (CSS custom properties in `:root` drive the palette) |
+| Rebrand for a different event | replace `assets/krakon-logo.svg` and swap `.masthead`'s background/logo in `index.html`; `styles.css`'s `--accent`/`--navy` already happen to be Krak-ON's real brand colors (pink `#ec398b`, navy), not neutral defaults — pick your own if forking for another event |
 
 ## 9. Relationship to `SPEC.md`
 

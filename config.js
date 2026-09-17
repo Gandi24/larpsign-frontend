@@ -6,7 +6,12 @@
 // ---------------------------------------------------------------------------
 window.CONFIG = {
   // Tytuł w nagłówku strony.
-  eventName: "Zapisy na larpy — festiwal",
+  eventName: "Zapisy na Krak-ON 2026",
+
+  // Link do strony z pełnymi opisami larpów i harmonogramem wydarzenia.
+  // Zostaw "", jeśli nie masz jeszcze takiej strony — formularz pokaże
+  // ogólny tekst zamiast linku.
+  programUrl: "https://krak-on.info/#harmonogram",
 
   // Dokąd trafiają zgłoszenia — adres Twojego wdrożenia Google Apps Script.
   // Przy testach lokalnych zostaw "" — formularz pozwoli pobrać odpowiedzi
@@ -29,6 +34,11 @@ window.CONFIG = {
 
   // RODO — jak długo trzymacie dane, zanim je usuniecie.
   retention: "do 60 dni po festiwalu, potem trwale usuwane",
+
+  // Link do regulaminu wydarzenia, pokazywany przy zgodzie "zapoznałam się
+  // z regulaminem". Zostaw "", jeśli nie masz jeszcze regulaminu online —
+  // zgoda i tak się pojawi, tylko bez linku.
+  rulesUrl: "",
 
   // RODO — gdzie fizycznie leżą dane (informacja o procesorze).
   processorNote:
