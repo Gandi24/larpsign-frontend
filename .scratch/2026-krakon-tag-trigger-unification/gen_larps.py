@@ -163,7 +163,10 @@ SLOT_INFO = {
     "Piątek wieczór (18:00–22:00)": ("pt_wieczor", "Piątek wieczór", "18:00–22:00 (4h)"),
     "Sobota rano (10:00–15:00)": ("sb_rano", "Sobota rano", "10:00–15:00 (5h)"),
     "Sobota wieczór (17:00–22:00)": ("sb_wieczor", "Sobota wieczór", "17:00–22:00 (5h)"),
-    "Niedziela rano (10:00–14:00)": ("nd_rano", "Niedziela rano", "10:00–14:00 (4h)"),
+    # Dict key matches the source CSV's own column header text verbatim (for
+    # lookup) — the CSV said 14:00, but the organiser corrected it to 15:00,
+    # so only the output tuple's time string reflects the real slot time.
+    "Niedziela rano (10:00–14:00)": ("nd_rano", "Niedziela rano", "10:00–15:00 (5h)"),
 }
 
 slots = {sid: {"id": sid, "name": name, "time": time, "larps": []} for sid, name, time in SLOT_INFO.values()}
