@@ -269,7 +269,7 @@
       ]
     }
   ],
-  "characterPreferences": ["Niebinarne", "Kobiece", "Męskie"],
+  "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
   "ticketTiers": [
     { "id": "tworcy", "label": "Bilet dla Twórców (MG, opiekunów larpowych)", "price": "40 zł" },
     { "id": "spoleczny", "label": "Bilet Społeczny", "price": "40 zł" },

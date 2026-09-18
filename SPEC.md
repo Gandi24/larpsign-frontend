@@ -115,7 +115,7 @@ re-sorts every slot (`change` listener on the form, §5).
     { "id": "przemoc", "label": "Przemoc", "triggers": ["Przemoc", "Gore", ...] }
     // 11 groups, 75 triggers total
   ],
-  "characterPreferences": ["Niebinarne", "Kobiece", "Męskie"],
+  "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
   "ticketTiers": [
     { "id": "wsparcia", "label": "Bilet Wsparcia", "price": "140 zł" }
   ],

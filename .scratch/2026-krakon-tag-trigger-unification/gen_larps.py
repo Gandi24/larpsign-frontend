@@ -212,7 +212,7 @@ result = {
     "_note": "Dane z arkusza organizatorów Krak-ON (2026-09-18) — tagi i triggery zunifikowane wspólnie z organizatorem z ~90/~93 surowych wariantów.",
     "preferenceTags": [{"id": i, "label": l} for i, l in PREF_TAGS],
     "triggerGroups": [{"id": i, "label": l, "triggers": t} for i, l, t in TRIGGER_GROUPS],
-    "characterPreferences": ["Niebinarne", "Kobiece", "Męskie"],
+    "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
     "ticketTiers": [
         {"id": "tworcy", "label": "Bilet dla Twórców (MG, opiekunów larpowych)", "price": "40 zł"},
         {"id": "spoleczny", "label": "Bilet Społeczny", "price": "40 zł"},
