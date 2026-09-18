@@ -59,12 +59,45 @@ function validateCharPrefs() {
 }
 
 function validateConsents() {
-  const ok = $("#consent").checked && $("#consent-rules").checked;
+  const ok = $("#consent-rodo").checked && $("#consent-strefazajec").checked && $("#consent-rules").checked;
   $(".consent").classList.toggle("invalid", !ok);
   const errorEl = $("#consent-error");
   if (errorEl) errorEl.textContent = ok ? "" : "Zaznacz wszystkie wymagane zgody powyżej.";
   return ok;
 }
+
+// "Wyrażam zgodę / Inne" — wzorzec współdzielony przez zgodę foto/wideo i
+// zgodę na maile (dokładnie jak w oficjalnym formularzu Krak-ON). Pytanie
+// wymagane w ODPOWIEDZI (jakiejkolwiek), nie w jej TREŚCI — "Wyrażam zgodę"
+// i "Inne" (choćby puste) są równie poprawnymi wyborami; to nie jest brama
+// zgody, tylko wymóg udzielenia jakiejkolwiek odpowiedzi.
+function getYesOtherAnswer(name) {
+  const checked = document.querySelector(`[name="${name}"]:checked`);
+  return {
+    choice: checked ? checked.value : null,
+    other: $(`#${name}-other-text`).value.trim(),
+  };
+}
+
+function validateYesOtherAnswer(name) {
+  const ok = getYesOtherAnswer(name).choice !== null;
+  const group = $(`#${name}-group`);
+  group.classList.toggle("bad", !ok);
+  const errorEl = $(`#${name}-error`);
+  if (errorEl) errorEl.textContent = ok ? "" : "Wybierz odpowiedź (Wyrażam zgodę albo Inne).";
+  return ok;
+}
+
+function wireYesOtherField(name) {
+  [`#${name}-yes`, `#${name}-other`].forEach((sel) =>
+    $(sel).addEventListener("change", () => validateYesOtherAnswer(name))
+  );
+  $(`#${name}-other-text`).addEventListener("focus", () => {
+    $(`#${name}-other`).checked = true;
+    validateYesOtherAnswer(name);
+  });
+}
+
 
 function ticketRowError(select) {
   return select.closest(".ticket-row").querySelector(".field-error");
@@ -105,8 +138,8 @@ function serializeDraft() {
     wantsNpc: $("#wants-npc").checked,
     goldenTicket: getGoldenTicketPriorities(),
     afterparty: {
-      friday: $("#after-friday").checked,
-      saturday: $("#after-saturday").checked,
+      friday: $("#afterparty-friday").checked,
+      saturday: $("#afterparty-saturday").checked,
     },
     selections,
   };
@@ -196,8 +229,10 @@ function restoreDraft() {
     if (sel && name) sel.value = name;
   });
   if (draft.afterparty) {
-    $("#after-friday").checked = !!draft.afterparty.friday;
-    $("#after-saturday").checked = !!draft.afterparty.saturday;
+    // "tak" is an older draft's tri-state value (pre-checkbox redesign) — still
+    // treated as checked so an in-progress draft saved before the redesign survives it.
+    $("#afterparty-friday").checked = draft.afterparty.friday === true || draft.afterparty.friday === "tak";
+    $("#afterparty-saturday").checked = draft.afterparty.saturday === true || draft.afterparty.saturday === "tak";
   }
 
   // Walidacja względem aktualnych danych: slot albo larp mógł zniknąć z
@@ -220,14 +255,37 @@ const SCALE = [
   { v: 2, label: "Uwielbiam" },
 ];
 
+// Twarz zamiast gołej liczby: usta jako jedna krzywa Béziera, której
+// wygięcie zależy wprost od `v` — jedna funkcja generuje wszystkie 5 min,
+// zamiast pięciu osobnych ikon do utrzymania. Rysowana w currentColor, więc
+// dziedziczy kolor z .seg span (szary nieaktywny / biały na zaznaczonym).
+function faceIcon(v) {
+  const mouthY = 15 + v * 2.2; // dodatnie v -> usta niżej pośrodku (uśmiech "◡"); ujemne -> wyżej (grymas "∩")
+  return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+    <circle cx="8" cy="9" r="1.4" fill="currentColor" />
+    <circle cx="16" cy="9" r="1.4" fill="currentColor" />
+    <path d="M7 15 Q12 ${mouthY.toFixed(1)} 17 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+  </svg>`;
+}
+
+// Delikatne podbarwienie nieaktywnego przycisku skali — czerwonawe dla
+// niechęci, zielonkawe dla sympatii, bez koloru dla neutralnego środka.
+// Ustawiane jako CSS custom property, nie bezpośrednio `background`, żeby
+// nie bić specyficznością reguły `.seg input:checked + span` w CSS.
+function segTint(v) {
+  if (v === 0) return "";
+  const rgb = v < 0 ? "210, 59, 84" : "46, 158, 91"; // --danger / --ok
+  const alpha = 0.07 + (Math.abs(v) / 2) * 0.08;
+  return `--tint: rgba(${rgb}, ${alpha.toFixed(2)});`;
+}
+
 init();
 
 async function init() {
   $("#event-name").textContent = cfg.eventName || "Zapisy na larpy";
   $("#footer-contact").textContent = cfg.controller
-    ? `Pytania i prośby o usunięcie danych: ${cfg.controller.email}`
+    ? `© ${new Date().getFullYear()} Festiwal Krak-ON. Pytania i prośby o usunięcie danych: ${cfg.controller.email}`
     : "";
-  renderPrivacy();
 
   try {
     data = await fetch("larps.json", { cache: "no-store" }).then((r) => r.json());
@@ -246,13 +304,14 @@ async function init() {
   renderSlots();
 
   if (cfg.rulesUrl) {
-    $("#consent-rules-text").innerHTML =
-      `Zapoznał*m się z <a href="${esc(cfg.rulesUrl)}" target="_blank" rel="noopener">regulaminem wydarzenia</a>. *`;
+    $("#rules-link-note").innerHTML =
+      `Regulamin wydarzenia dostępny jest pod adresem:
+       <a href="${esc(cfg.rulesUrl)}" target="_blank" rel="noopener">${esc(cfg.rulesUrl)}</a>`;
   }
   if (cfg.programUrl) {
     $("#intro-text").innerHTML =
-      `Pełne opisy larpów i harmonogram festiwalu znajdziesz
-       <a href="${esc(cfg.programUrl)}" target="_blank" rel="noopener">na stronie wydarzenia</a>.`;
+      `Pełny opis larpów i harmonogram:
+       <a href="${esc(cfg.programUrl)}" target="_blank" rel="noopener">strona wydarzenia</a>.`;
   }
 
   REQUIRED_TEXT_FIELDS.forEach((id) => {
@@ -269,9 +328,11 @@ async function init() {
     });
   });
   $("#char-prefs").addEventListener("change", validateCharPrefs);
-  ["#consent", "#consent-rules"].forEach((sel) =>
+  ["#consent-rodo", "#consent-strefazajec", "#consent-rules"].forEach((sel) =>
     $(sel).addEventListener("change", validateConsents)
   );
+  // Wpisanie tekstu w "Inne" samo zaznacza ten wybór — jak w Google Forms.
+  ["consent-photo", "consent-marketing"].forEach(wireYesOtherField);
 
   const form = $("#signon-form");
   form.addEventListener("submit", onSubmit);
@@ -290,22 +351,11 @@ async function init() {
   form.addEventListener("change", scheduleSave);
 }
 
-function renderPrivacy() {
-  const c = cfg.controller || {};
-  $("#privacy-notice").innerHTML = `
-    <p><strong>Kto przechowuje dane:</strong> ${esc(c.name || "organizatorzy")}
-       (<a href="mailto:${esc(c.email || "")}">${esc(c.email || "")}</a>),
-       administrator danych.</p>
-    <p><strong>Po co:</strong> aby przydzielić Ci pasującą rolę i bezpiecznie poprowadzić gry.</p>
-    <p><strong>Jak długo:</strong> ${esc(cfg.retention || "do końca wydarzenia, potem usuwane")}.</p>
-    <p><strong>Gdzie:</strong> ${esc(cfg.processorNote || "")}</p>`;
-}
-
 // --- render: legenda + preferencje -----------------------------------------
 
 function renderLegend() {
   $("#pref-legend").innerHTML = SCALE.map(
-    (s) => `<span><b>${s.v > 0 ? "+" + s.v : s.v}</b> ${esc(s.label)}</span>`
+    (s) => `<span>${faceIcon(s.v)} ${esc(s.label)}</span>`
   ).join("");
 }
 
@@ -316,8 +366,8 @@ function renderPrefs() {
         <span class="pref-label">${esc(t.label)}</span>
         <div class="seg">${SCALE.map(
           (s) => `<label title="${esc(s.label)}">
-            <input type="radio" name="pref_${t.id}" value="${s.v}" ${s.v === 0 ? "checked" : ""}/>
-            <span>${s.v > 0 ? "+" + s.v : s.v}</span>
+            <input type="radio" name="pref_${t.id}" value="${s.v}" aria-label="${esc(s.label)}" ${s.v === 0 ? "checked" : ""}/>
+            <span style="${segTint(s.v)}">${faceIcon(s.v)}</span>
           </label>`
         ).join("")}</div>
       </div>`
@@ -626,7 +676,7 @@ function collect() {
   });
 
   return {
-    meta: { event: cfg.eventName || "", submittedAt: new Date().toISOString(), schemaVersion: 4 },
+    meta: { event: cfg.eventName || "", submittedAt: new Date().toISOString(), schemaVersion: 8 },
     identity: {
       firstName: $("#first-name").value.trim(),
       lastName: $("#last-name").value.trim(),
@@ -639,14 +689,15 @@ function collect() {
     wantsNpc: $("#wants-npc").checked,
     goldenTicket: { priorities: getGoldenTicketPriorities() },
     afterparty: {
-      friday: $("#after-friday").checked,
-      saturday: $("#after-saturday").checked,
+      friday: $("#afterparty-friday").checked,
+      saturday: $("#afterparty-saturday").checked,
     },
     consent: {
-      given: $("#consent").checked,
+      rodoNoticeRead: $("#consent-rodo").checked,
+      strefazajecInformed: $("#consent-strefazajec").checked,
       rulesRead: $("#consent-rules").checked,
-      photoVideo: $("#consent-photo").checked,
-      marketingEmail: $("#consent-marketing").checked,
+      photoVideo: getYesOtherAnswer("consent-photo"),
+      marketingEmail: getYesOtherAnswer("consent-marketing"),
       timestamp: new Date().toISOString(),
     },
     preferences: ratings,
@@ -690,6 +741,9 @@ function validate() {
 
   note(validateCharPrefs(), $("#char-prefs"));
   note(validateConsents(), $(".consent"));
+  ["consent-photo", "consent-marketing"].forEach((name) =>
+    note(validateYesOtherAnswer(name), $(`#${name}-group`))
+  );
   const badTicket = revalidateTickets();
   note(!badTicket, badTicket);
 

@@ -27,8 +27,8 @@ Script Web App**, which lives in a separate repo:
 the whole thing up — both repos — takes **no terminal, no CLI, and no new
 unfamiliar platform**: everything is clicking through GitHub's and Google's
 own web UIs, and both are free at festival scale. It is **GDPR-aware**:
-explicit opt-in consent, a privacy notice (controller, purpose, retention,
-storage), and an erasure contact.
+explicit opt-in consent, a privacy notice (controller, purpose, storage),
+and an erasure contact.
 
 ```
 larpsign-frontend (this repo, GitHub Pages)   larpsign-backend repo          Private GitHub repo
@@ -57,7 +57,7 @@ the Apps Script Web App — see
 | `styles.css`                | Styling                                                |
 | `assets/krakon-logo.svg`    | Krak-ON's own logo (white), shown in the top masthead — swap for your event's own mark if forking this template |
 | `larps.json`                | **Edit this** — preference tags, triggers, character preferences, ticket tiers, and the 4 timeslots with their larps |
-| `config.js`                 | **Edit this** — event name, organiser, retention, rules link, endpoint URL, shared secret |
+| `config.js`                 | **Edit this** — event name, organiser, rules link, endpoint URL, shared secret |
 | `app.js`                    | Form engine (ratings, triggers, slot matching, submit/download) |
 | `submit-outcome.js`         | Pure "what does this response mean to the player" logic, shared with `tests/` |
 | `tests/`                    | Node tests for `submit-outcome.js` (`npm test`) — nothing else in this repo is tested |
@@ -139,13 +139,18 @@ Larps in a slot are sorted by this, so the best matches float to the top.
 
 ```jsonc
 {
-  "meta": { "event", "submittedAt", "schemaVersion": 4 },
+  "meta": { "event", "submittedAt", "schemaVersion": 8 },
   "identity": { "firstName", "lastName", "preferredAddress", "email", "phone", "birthdate" },
   "characterPreferences": ["Kobiece", ...],
   "wantsNpc": false,
   "goldenTicket": { "priorities": ["<larp name>", ...] },   // 0-3, temporary feature
-  "afterparty": { "friday": true, "saturday": false },
-  "consent": { "given": true, "rulesRead": true, "photoVideo": true, "marketingEmail": false, "timestamp" },
+  "afterparty": { "friday": true, "saturday": false },      // plain optional booleans
+  "consent": {
+    "rodoNoticeRead": true, "strefazajecInformed": true, "rulesRead": true,
+    "photoVideo": { "choice": "tak", "other": "" },
+    "marketingEmail": { "choice": "inne", "other": "nie" },
+    "timestamp"
+  },
   "preferences": { "scifi": 2, "romans": -2, ... },   // tag id -> rating
   "triggers": ["Izolacja i osamotnienie", ...],        // the player's triggers
   "choices": {                                          // per timeslot, ordered
@@ -161,18 +166,30 @@ flag for the casting crew.
 
 ## GDPR notes for the organiser
 
-- **Consent** is recorded with each submission (`consent.given` + timestamp).
-- **Retention:** delete the files when you said you would (`config.js → retention`).
-  Deleting the file from the private repo removes the data.
-- **Erasure requests** come to `controller.email`; find the person's file and
-  delete it (and any local copies/exports).
+- **Consent** is recorded with each submission — three required
+  confirmations (`consent.rodoNoticeRead`, `consent.strefazajecInformed`,
+  `consent.rulesRead`) plus a shared timestamp. The form reproduces Centrum
+  Kultury Podgórza's own official RODO notice and strefazajec.pl disclosure
+  verbatim rather than a custom summary — see `SPEC.md` §8.
+- **Retention:** the reproduced official RODO notice states concrete periods
+  (5 years for accounting/tax records, 3 months for camera-monitoring
+  footage, until withdrawal for consent-based processing — see `SPEC.md` §8).
+  Deleting the file from the private repo removes the data; there's no
+  automated expiry job enforcing those periods.
+- **Erasure requests** come to `controller.email` (shown in the footer) as
+  this project's own practical contact; find the person's file and delete it
+  (and any local copies/exports). The reproduced official notice also names
+  Centrum Kultury Podgórza's own contact channels for RODO purposes generally.
 - **Minimise:** identity fields are limited to what's needed for casting,
   emergency contact, and 18+ verification (name, address form, e-mail, phone,
   birthdate), plus preferences.
-- **Photo/video consent** (`consent.photoVideo`) is optional and separate
-  from the general data-processing consent — a player can register without
-  it. Only use/publish a person's photos if this is `true`, and honor a later
-  withdrawal independently (don't touch their event registration for it).
+- **Photo/video consent** (`consent.photoVideo`) and **marketing-email
+  consent** (`consent.marketingEmail`) are each a required *question*
+  (`{ choice: "tak"|"inne", other }`), not a required *agreement* — a player
+  can decline (answer "Inne" with e.g. "nie") and still register. Only
+  use/publish a person's photos, or email them event info, if
+  `choice === "tak"`, and honor a later withdrawal independently (don't touch
+  their event registration for it).
 - Keep the submissions repo **private** and limit who has access.
 
 ## Running the tests

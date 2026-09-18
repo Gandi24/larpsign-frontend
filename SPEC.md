@@ -7,7 +7,26 @@ unified from ~90/~93 raw variants down to 31 tags and 75 triggers grouped
 into 11 collapsible categories — see §3. A "zapisz i wróć później" draft
 autosave (localStorage) was also added — see §6a. Same day: an NPC-interest
 checkbox and a temporary "Złoty Bilet" (Golden Ticket) priority picker were
-added — see §2 items 1/5 and §6, `schemaVersion` bumped to 4. This describes
+added — see §2 items 1/5 and §6, `schemaVersion` bumped to 4. Later the same
+week: photo/video consent switched from a plain checkbox to a required
+"Wyrażam zgodę"/"Inne" answer (`schemaVersion` 5), then afterparty was
+changed from yes/no to tri-state Tak/Nie/Może and marketing-email consent was
+converted to the same "Wyrażam zgodę"/"Inne" shape as photo/video, both to
+match the official Krak-ON form's own wording exactly (`schemaVersion` 6).
+Then: the custom-written RODO privacy summary and expandable rights list
+were replaced with Centrum Kultury Podgórza's own official RODO notice text,
+copied verbatim (not paraphrased), plus a verbatim strefazajec.pl payment
+processor statement and a dedicated regulamin-link confirmation — three
+required checkboxes replacing the old two (`schemaVersion` 7). Immediately
+after: afterparty reverted from tri-state Tak/Nie/Może radios back to two
+plain optional checkboxes (`schemaVersion` 8, `afterparty.friday`/`.saturday`
+now booleans) per explicit user preference for the simpler control over
+matching the official form exactly on this one field, and every consent
+question's markup was unified into one repeated shape — bold statement,
+optional expandable/link section, unbolded selectable option(s) — with the
+photo-consent blurb rewritten to state that *all* photos (not just
+"controversial" larps') get sent back for verification before publishing —
+see §2 items 6-7 and §6. This describes
 what the code *does* — for what's actually deployed right now vs. just built
 and tested, see `DESIGN.md` §10.
 Scope: what the system does and the rules it follows. For *how it's built and why*, see `DESIGN.md`.
@@ -50,12 +69,38 @@ can pick their top choices per slot without prior knowledge of the games.
    a single-use, likely-short-lived mechanic. No duplicate-prevention across
    the three selects — picking the same larp twice is harmless, the
    organiser just reads it as one choice.
-6. **Afterparty** — optional yes/no interest for the Friday and Saturday
-   afterparty, independent of slot picks.
-7. **Prywatność i zgoda** — GDPR notice (controller, purpose, retention, storage
-   location) rendered from `config.js`, plus four consent lines: general data
-   processing and rules-read (required), and photo/video use and a
-   marketing-email opt-in (both optional).
+6. **Afterparty** — two independent, optional checkboxes ("Chcę wziąć udział
+   w afterparty w piątek"/"w sobotę"), independent of slot picks. Simpler
+   than matching the official Krak-ON form's own tri-state Tak/Nie/Może
+   exactly — briefly implemented that way, then reverted back to plain
+   checkboxes on user preference (see `DESIGN.md` §7 for the history); this
+   is the one place this form deliberately diverges from the official form's
+   own control shape.
+7. **Prywatność i zgoda** — five questions, each following one repeated
+   visual shape: a **bold** statement of what's being asked, then an
+   *optional* supplementary section (an expandable `<details>` for the long
+   official text, a plain paragraph, or nothing), then the *unbolded*
+   selectable option(s) that answer it. Three required checkboxes carry
+   Centrum Kultury Podgórza's own text copied verbatim, not our own
+   paraphrase: (a) "Informacja dotycząca przetwarzania danych osobowych." as
+   the bold statement, a collapsible `<details>` holding the full, unedited
+   official RODO notice (sections I-X: administrator, IOD, legal basis,
+   retention, rights, etc.) as the optional section, and "Zapoznał*m się z
+   powyższą informacją." as the plain confirmation; (b) "Zapisy i płatności
+   obsługuje portal strefazajec.pl." as the bold statement, the verbatim
+   "Oświadczam, że zostałem poinformowany..." payment-processor disclosure as
+   a plain paragraph, and "Oświadczam, że się zapoznał*m." as the plain
+   confirmation; (c) "Regulamin wydarzenia." as the bold statement, "Regulamin
+   wydarzenia dostępny jest pod adresem: `<rulesUrl>`" as the optional link,
+   and "Zapoznałem się z regulaminem wydarzenia." as the plain confirmation.
+   Then, same shape, unchanged mechanics: a photo/video question ("all
+   photos get sent back to you for verification before publishing" as the
+   optional note, replacing an earlier "controversial larps only" framing)
+   and a marketing-email question, both required to *answer* but not to
+   agree — "Wyrażam zgodę" or "Inne" with free text, via the shared
+   `getYesOtherAnswer`/`validateYesOtherAnswer`/`wireYesOtherField` helpers
+   (see §6) — wording matches the official form's "Wyrażam zgodę"/"Inne"
+   options exactly, not a generic "Tak".
 8. Submit — see §6.
 
 Changing any preference rating or trigger checkbox live-recomputes match % and
@@ -157,9 +202,15 @@ priority order, not match %.
   input's own `checkValidity()`, not just non-empty), phone, and birthdate
   all non-empty.
 - At least one `characterPreferences` checkbox ticked.
-- General consent and rules-read consent both checked (`photoVideo` and
-  `marketingEmail` are optional consents — unchecked is a valid `false` for
-  either).
+- All three RODO/consent checkboxes checked: the official privacy-notice
+  read-confirmation (`#consent-rodo`), the strefazajec.pl payment-processor
+  acknowledgement (`#consent-strefazajec`), and the regulamin read-confirmation
+  (`#consent-rules`).
+- The photo/video question and the marketing-email question each have a
+  selection — "Wyrażam zgodę" or "Inne" (`getYesOtherAnswer(name).choice !== null`,
+  shared by both via `validateYesOtherAnswer`/`wireYesOtherField`). The
+  *content* isn't validated: "Inne" with an empty free-text field still counts
+  as answered — only an *answer* is required, not agreement.
 - Every current slot pick has a `ticketTier` selected (checked per slot, in
   tray-item DOM order — see `DESIGN.md` §6 for why by-position, not by-name).
 
@@ -182,11 +233,11 @@ player who adds zero larps to any slot can still submit, as long as the
 identity/consent fields above are satisfied (a pick, once added, does require
 its ticket tier).
 
-**Submission payload** (`schemaVersion: 4`):
+**Submission payload** (`schemaVersion: 8`):
 
 ```jsonc
 {
-  "meta": { "event", "submittedAt" /* ISO */, "schemaVersion": 4 },
+  "meta": { "event", "submittedAt" /* ISO */, "schemaVersion": 8 },
   "identity": {
     "firstName", "lastName", "preferredAddress", "email", "phone",
     "birthdate" // "YYYY-MM-DD" from <input type=date>, no auto age-check
@@ -194,10 +245,17 @@ its ticket tier).
   "characterPreferences": ["<characterPreferences string>", ...],
   "wantsNpc": false,
   "goldenTicket": { "priorities": ["<larp name>", ...] },  // 0-3 entries, empty selects dropped, order preserved
-  "afterparty": { "friday": true, "saturday": false },
+  "afterparty": {
+    "friday": true,   // plain optional booleans — unchecked is a valid false
+    "saturday": false
+  },
   "consent": {
-    "given": true, "rulesRead": true, "photoVideo": true,
-    "marketingEmail": false, "timestamp" /* ISO */
+    "rodoNoticeRead": true,       // confirms the official RODO notice (verbatim, §7)
+    "strefazajecInformed": true,  // confirms the strefazajec.pl payment-processor disclosure (verbatim)
+    "rulesRead": true,            // confirms the event regulamin
+    "photoVideo": { "choice": "tak", "other": "" },        // choice: "tak" | "inne" | null (null only pre-validation)
+    "marketingEmail": { "choice": "inne", "other": "nie" }, // same shape as photoVideo, same validation
+    "timestamp" /* ISO */
   },
   "preferences": { "<tagId>": -2..2, ... },       // every tag, defaults included
   "triggers": ["<trigger string>", ...],           // only the ticked ones
@@ -281,7 +339,8 @@ have changed since the draft was saved).
   afterward — it never appears in what gets committed to GitHub. See
   `larpsign-backend`'s README ("Shared secret") for what this protects
   against and what it deliberately doesn't.
-- `submission.consent.given === true` → else
+- `submission.consent.rodoNoticeRead === true && submission.consent.strefazajecInformed
+  === true && submission.consent.rulesRead === true` → else
   `{ ok: false, error: "consent_required" }`. This is the **only**
   server-side content validation of `submission`; name/preferences/choices
   are not re-checked.
@@ -314,36 +373,60 @@ have changed since the draft was saved).
 
 ## 8. GDPR / privacy requirements
 
-- **Lawful basis**: explicit opt-in consent, checkbox required, timestamped
-  and stored with every submission. One further required consent,
-  `rulesRead` (having read the event rules), is collected separately for its
-  own distinct purpose. `photoVideo` (promotional photo/video use) and
-  `marketingEmail` are both optional opt-ins — unchecked is a valid `false`,
-  registration doesn't depend on either. Keeping all of these as separate
-  booleans (rather than folding them into the one general `consent.given`)
-  matters because photo/video use in particular is a distinct purpose under
-  GDPR from processing data for casting — being its own optional field (not
-  bundled into the required registration consent) is itself the correct GDPR
-  posture: consent for a distinct purpose must be freely given, separable,
-  and not a condition of using the service.
-- **Transparency**: privacy notice rendered from `config.js.controller` /
-  `retention` / `processorNote` before consent; a `<details>` block explains
-  data-subject rights (access, rectification, erasure) in Polish. If
-  `config.js.rulesUrl` is set, the rules-read consent links to it.
+- **Lawful basis**: explicit opt-in consent, three checkboxes required,
+  timestamped and stored with every submission — confirming the official
+  RODO notice (`rodoNoticeRead`), the strefazajec.pl payment-processor
+  disclosure (`strefazajecInformed`), and the event regulamin
+  (`rulesRead`), each its own distinct purpose. `photoVideo` (promotional
+  photo/video use) is a required *question*, not a required *consent* — the
+  player must pick "Wyrażam zgodę" or "Inne" (with optional free text for
+  nuance, e.g. partial consent), but either answer, including a declining
+  "Inne", satisfies validation. `marketingEmail` follows the identical
+  pattern. Keeping photo/video and marketing-email as their own fields
+  (rather than folding them into the general consents) matters because each
+  is a distinct purpose under GDPR from processing data for casting —
+  consent (or its refusal) for a distinct purpose must be freely given,
+  separable, and not a condition of using the service, which is also why
+  answering the question is required but *agreeing* is not.
+- **Transparency**: the full official "Informacja dotycząca przetwarzania
+  danych osobowych" (Centrum Kultury Podgórza's own RODO notice, sections
+  I-X — administrator, IOD, legal basis and purposes, data-subject rights,
+  retention, recipients, automated-decision and third-country disclosures)
+  is reproduced verbatim in a `<details>` block, not paraphrased or
+  summarized — see `DESIGN.md` §7 for why independent wording was abandoned
+  in favor of copying the organiser's own text exactly. The
+  strefazajec.pl payment-processor statement is likewise verbatim, with its
+  full text serving as the checkbox's own label rather than a summary of it.
+  If `config.js.rulesUrl` is set, a note above the third checkbox links to
+  the regulamin directly ("Regulamin wydarzenia dostępny jest pod adresem:
+  ...").
 - **Data minimization**: name, email, phone, and birthdate are all mandatory
   — a wider set than the original nickname-only design, adopted to match a
   real festival's actual needs (emergency contact, 18+ verification for
   legally-required age-gating). No further PII beyond what's in this spec is
   collected.
-- **Storage location disclosure**: `processorNote` names Google LLC (USA, the
-  Apps Script relay — data transits but is not persisted there) and GitHub
-  Inc. (USA, the actual storage) as processors — must stay accurate if either
-  backend changes.
-- **Retention**: organiser-defined free text (`config.js.retention`); *enforced
-  manually* — deleting the JSON file in the private repo is the deletion
-  mechanism, there is no automated expiry job.
-- **Erasure**: routed to `controller.email`, shown in the footer; manual
-  process (organiser finds and deletes the file(s) for that person).
+- **Storage location disclosure**: this form's own processing chain (Google
+  Apps Script relay, data transits but is not persisted there, and GitHub as
+  the actual storage, both USA-based) is not separately disclosed to the
+  player in the form's own copy — the official RODO notice (§V, "Odbiorcy
+  danych osobowych") covers processors in general terms. If this becomes a
+  compliance concern, it belongs in the organiser's own regulamin/RODO text,
+  not as separately-invented copy in this codebase — see `DESIGN.md` §7.
+- **Retention**: the official RODO notice's own §VI states concrete retention
+  periods (accounting/tax documentation: 5 years after the year of the
+  event; camera-monitoring recordings: no more than 3 months; consent-based
+  processing: until withdrawal) — reproduced verbatim as part of the notice,
+  superseding this project's earlier approach of displaying no retention
+  info at all (see `DESIGN.md` §7 for that history). *Enforced manually
+  regardless*: deleting the JSON file in the private repo is this project's
+  own deletion mechanism, there is no automated expiry job.
+- **Erasure**: the official notice's own §I/§II give the authoritative
+  contact channels (Centrum Kultury Podgórza, `sekretariat@ckpodgorza.pl`,
+  and its Inspektor Ochrony Danych at `iod@ckpodgorza.pl`); `controller.email`
+  in `config.js`, shown in the footer, is this project's own practical
+  contact for erasure requests specifically about a `larpsign` submission —
+  manual process either way (organiser finds and deletes the file(s) for
+  that person).
 - **Public files contain no secrets**: `config.js` and `larps.json` are served
   publicly via GitHub Pages and must never carry tokens or participant data —
   only `larpsign-backend`'s `Code.gs`'s `GH_TOKEN` (an Apps Script Script

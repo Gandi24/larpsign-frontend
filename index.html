@@ -18,14 +18,14 @@
     <header>
       <h1 id="event-name">Zapisy na larpy</h1>
       <p class="intro" id="intro-text">
-        Pełne opisy larpów i harmonogram festiwalu znajdziesz na stronie wydarzenia.
+        Pełny opis larpów i harmonogram: strona wydarzenia.
       </p>
     </header>
 
     <form id="signon-form" novalidate>
       <!-- 0. Kto się zapisuje (minimum) -->
       <section class="card">
-        <h2>Kto się zapisuje</h2>
+        <h2>Twoje dane</h2>
         <div class="q">
           <label class="q-label" for="first-name">Imię <span class="req">*</span></label>
           <input type="text" id="first-name" autocomplete="given-name" aria-describedby="first-name-error" />
@@ -81,17 +81,17 @@
       </section>
 
       <!-- 3. Sloty czasowe -->
-      <section class="card">
+      <div class="section-header">
         <h2>3. Twoje wybory w slotach</h2>
         <p class="blurb">
-          W każdym slocie kliknij <strong>+ Dodaj</strong>, by wybrać larp (do 4).
-          Wybrane trafiają na listę „Twoje wybory”, gdzie ustawisz kolejność (▲ ▼),
-          wybierzesz <strong>bilet</strong> dla każdej gry, lub usuniesz (✕). Lista poniżej
-          jest ułożona od najlepiej dopasowanych. Procent to dopasowanie do Twoich
+          Każdy slot to osobna karta poniżej. Kliknij <strong>+ Dodaj</strong>, by wybrać
+          larp (do 4). Wybrane trafiają na listę „Twoje wybory”, gdzie ustawisz kolejność
+          (▲ ▼), wybierzesz <strong>bilet</strong> dla każdej gry, lub usuniesz (✕). Lista
+          poniżej jest ułożona od najlepiej dopasowanych. Procent to dopasowanie do Twoich
           preferencji, a <strong>pogrubione</strong> hasła to triggery danej gry.
         </p>
-        <div id="slots"></div>
-      </section>
+      </div>
+      <div id="slots"></div>
 
       <!-- Złoty Bilet -->
       <section class="card">
@@ -130,11 +130,11 @@
         <h2>Afterparty</h2>
         <p class="blurb">Nieobowiązkowe — pomaga nam zaplanować przestrzeń.</p>
         <label class="checkline">
-          <input type="checkbox" id="after-friday" />
+          <input type="checkbox" id="afterparty-friday" />
           <span>Chcę wziąć udział w afterparty w piątek</span>
         </label>
         <label class="checkline">
-          <input type="checkbox" id="after-saturday" />
+          <input type="checkbox" id="afterparty-saturday" />
           <span>Chcę wziąć udział w afterparty w sobotę</span>
         </label>
       </section>
@@ -142,34 +142,191 @@
       <!-- RODO -->
       <section class="card consent">
         <h2>Prywatność i zgoda</h2>
-        <div id="privacy-notice" class="privacy"></div>
-        <details class="rights">
-          <summary>Twoje prawa (RODO)</summary>
+
+        <div class="q">
+        <label class="q-label" id="consent-rodo-label">
+          <strong>Informacja dotycząca przetwarzania danych osobowych.</strong> <span class="req">*</span>
+        </label>
+        <details class="rodo-notice">
+          <summary>Rozwiń pełną treść</summary>
           <p>
-            W każdej chwili możesz poprosić o wgląd, poprawienie lub trwałe usunięcie
-            swoich odpowiedzi. Podanie danych jest dobrowolne; używamy ich wyłącznie do
-            przydziału ról i bezpiecznego prowadzenia gier. Nie udostępniamy ich nikomu
-            spoza ekipy i nie podejmujemy na ich podstawie automatycznych decyzji.
+            W związku z przetwarzaniem danych osobowych uczestników, informujemy –
+            zgodnie z art. 13 ust 1 i ust. 2 Rozporządzenia Parlamentu Europejskiego
+            i Rady (UE) 2016/679 z dnia 27.04.2016r. w sprawie ochrony osób
+            fizycznych w związku z przetwarzaniem danych osobowych i w sprawie
+            swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE
+            (ogólne rozporządzenie o ochronie danych) ( Dz. Urz. UE L z 04.05.2016 r,
+            Nr 119, s. 1) zwanego dalej „RODO” iż:
           </p>
+          <p><strong>I. ADMINISTRATOR DANYCH</strong><br />
+            Administratorem Pani/Pana danych osobowych lub danych osobowych
+            Pani/Pana dziecka* jest Centrum Kultury Podgórza, reprezentowane przez
+            Dyrektora. Z Administratorem można się kontaktować pisemnie za pomocą
+            poczty tradycyjnej pod adresem: Centrum Kultury Podgórza, ul. Sokolska 13,
+            30-510 Kraków, poprzez email: sekretariat@ckpodgorza.pl lub telefonicznie
+            pod numerem telefonu: 12 656 36 70.</p>
+          <p><strong>II. INSPEKTOR OCHRONY DANYCH</strong><br />
+            Administrator wyznaczył Inspektora Ochrony Danych z którym można się
+            kontaktować pod adresem: Centrum Kultury Podgórza, Kraków, ul. Sokolska 13,
+            30-510 Kraków, poprzez email: iod@ckpodgorza.pl.</p>
+          <p><strong>III. PODSTAWA PRAWNA I CELE PRZETWARZANIA DANYCH OSOBOWYCH</strong><br />
+            Dane osobowe uczestników i opiekunów prawnych uczestników* będą przez
+            nas przetwarzane w celu:<br />
+            1) organizacji zajęć, warsztatów, wycieczek i innych aktywności (usług)
+            oferowanych przez Administratora Danych Osobowych lub jednostki podległe,
+            a także w celu realizacji umowy dotyczącej uczestnictwa w ww. usługach na
+            warunkach określonych w „Regulaminie uczestnictwa w zajęciach” (podstawa
+            prawna art. 6 ust. 1 lit b RODO),<br />
+            2) wypełnienia ciążących na nas obowiązków prawno – podatkowych
+            (podstawa prawna: art. 6 ust. 1 lit. c RODO, ustawa z dnia 26 lipca 1991 r.
+            o podatku dochodowym od osób fizycznych);<br />
+            3) zapewnienia bezpieczeństwa uczestników i ochrony mienia – poprzez
+            stosowanie monitoringu wizyjnego (podstawa prawna: art. 6 ust. 1 lit. e RODO);<br />
+            4) ewentualnego wykorzystania wizerunku uczestnika lub wizerunku
+            (np. w formie zdjęć lub materiału audiowideo z przebiegu zajęć lub
+            wycieczek) na stronie internetowej lub w mediach społecznościowych
+            (np. Facebook) – wyłącznie na podstawie zgody udzielonej nam przez
+            uczestnika lub opiekuna prawnego uczestnika* (podstawa prawna:
+            art. 6 ust. 1 lit. a RODO);<br />
+            5) wysyłania na podany adres e-mail wszelkich informacji organizacyjnych
+            dotyczących działalności Administratora, w tym w formie biuletynu
+            newsletter – wyłącznie na podstawie zgody udzielonej nam przez uczestnika
+            lub opiekuna prawnego uczestnika* (podstawa prawna: art. 6 ust. 1 lit. a RODO).</p>
+          <p><strong>IV. INFORMACJE O WYMOGU/DOBROWOLNOŚCI PODANIA DANYCH ORAZ
+            KONSEKWENCJI NIE PODANIA DANYCH OSOBOWYCH</strong><br />
+            Podanie danych osobowych jest dobrowolne, lecz niezbędne do wzięcia
+            udziału w zajęciach, warsztatach, wycieczkach i innych aktywnościach
+            (usługach) oferowanych przez Administratora lub jednostki podległe.
+            Niepodanie lub podanie niepełnych danych osobowych będzie skutkować
+            brakiem możliwości wzięcia w nich udziału.</p>
+          <p><strong>V. ODBIORCY DANYCH OSOBOWYCH</strong><br />
+            1) Odbiorcami danych osobowych będą podmioty uprawnione na podstawie
+            przepisów prawa, a także operatorzy płatności elektronicznych.<br />
+            2) Dane osobowe uczestnika i opiekuna prawnego uczestnika* mogą być
+            również przekazywane podmiotom przetwarzającym dane osobowe na zlecenie
+            Administratora np. dostawcom usług IT i innym podmiotom przetwarzającym
+            dane w celu określonych przez Administratora – przy czym takie podmioty
+            przetwarzają dane wyłącznie na podstawie umowy z Administratorem.</p>
+          <p><strong>VI. OKRES PRZECHOWYWANIA DANYCH OSOBOWYCH</strong><br />
+            Dane osobowe będą przetwarzane nie dłużej niż to będzie niezbędne do
+            należytej organizacji zajęć, warsztatów, wycieczek lub innych aktywności,
+            a następnie przez okres przechowywania dokumentacji księgowej i podatkowej
+            wynikający z przepisów prawa (5 lat po roku, w którym miało miejsce dane
+            zdarzenie), dochodzenia roszczeń natury cywilnoprawnej, w celach
+            archiwalnych (zgodnie z obowiązującymi przepisami dotyczącymi
+            archiwizowania dokumentacji powstałej z tytułu działania jednostki
+            państwowej), a w przypadku danych przetwarzanych na podstawie zgody – do
+            momentu jej odwołania lub wyrażenia sprzeciwu wobec przetwarzania.<br />
+            Nagrania obrazu (monitoring) Administrator przetwarza wyłącznie do celów,
+            dla których zostały zebrane, i przechowuje przez okres nie dłuższy niż
+            3 miesiące od dnia nagrania.</p>
+          <p><strong>VII. PRAWA OSÓB, KTÓRYCH DANE DOTYCZĄ</strong><br />
+            W związku z przetwarzaniem danych osobowych posiada Pani/Pan prawo do:<br />
+            1) Dostępu do treści danych osobowych,<br />
+            2) Prawo do sprostowania danych,<br />
+            3) Usunięcia danych osobowych<br />
+            4) Ograniczenia przetwarzania danych osobowych<br />
+            5) Przenoszenia danych,<br />
+            6) Wniesienie sprzeciwu wobec przetwarzania danych<br />
+            7) Otrzymania kopii swoich danych osobowych,<br />
+            8) Cofnięcia zgody w dowolnym momencie bez wpływu na zgodność z prawem
+            przetwarzania, którego dokonano na podstawie zgody przed jej cofnięciem –
+            jeżeli przetwarzanie odbywa się na podstawie udzielonej nam zgody,<br />
+            – w przypadkach i na warunkach określonych w RODO. Prawa wymienione
+            powyżej można zrealizować poprzez kontakt z Administratorem Danych.</p>
+          <p><strong>VIII. PRAWO WNIESIENIA SKARGI DO ORGANU NADZORCZEGO</strong><br />
+            Posiada Pani/Pan prawo wniesienia skargi do Prezesa Urzędu Ochrony Danych
+            Osobowych, gdy uzasadnione jest, że Pana/Pani dane osobowe przetwarzane są
+            przez administratora niezgodnie z przepisami RODO.</p>
+          <p><strong>IX. ZAUTOMATYZOWANE PODEJMOWANIE DECYZJI W TYM PROFILOWANIE</strong><br />
+            Pani/Pana dane osobowe nie będą przetwarzane w sposób zautomatyzowany,
+            w tym w formie profilowania.</p>
+          <p><strong>X. PRZEKAZYWANIE DANYCH OSOBOWYCH DO PAŃSTWA TRZECIEGO LUB
+            ORGANIZACJI MIĘDZYNARODOWEJ</strong><br />
+            Pani/Pana dane osobowe nie będą przekazywane do organizacji
+            międzynarodowych oraz państw trzecich.</p>
         </details>
-        <label class="checkline required-line">
-          <input type="checkbox" id="consent" required aria-describedby="consent-error" />
-          <span>Przeczytał*m powyższe i zgadzam się na przechowywanie oraz wykorzystanie
-            moich odpowiedzi do przydziału ról na tym wydarzeniu. *</span>
-        </label>
-        <label class="checkline required-line">
-          <input type="checkbox" id="consent-rules" required aria-describedby="consent-error" />
-          <span id="consent-rules-text">Zapoznał*m się z regulaminem wydarzenia. *</span>
-        </label>
         <label class="checkline">
-          <input type="checkbox" id="consent-photo" />
-          <span>Wyrażam zgodę na fotografowanie i/lub nagrywanie mojego wizerunku w celach
-            promocyjnych i marketingowych wydarzenia (nieobowiązkowe).</span>
+          <input type="checkbox" id="consent-rodo" required aria-describedby="consent-error" />
+          <span>Zapoznał*m się z powyższą informacją.</span>
         </label>
+        </div>
+
+        <div class="q">
+        <label class="q-label" id="consent-strefazajec-label">
+          <strong>Zapisy i płatności obsługuje portal strefazajec.pl.</strong> <span class="req">*</span>
+        </label>
+        <p class="blurb">
+          Oświadczam, że zostałem poinformowany, że zapisy i płatności będą
+          obsługiwane przez portal strefazajec.pl, którego operatorem jest firma
+          biletyna.pl sp. z o.o. (dawniej GnP Dec sp.k.), ul. Kościuszki 23,
+          05-082 Blizne Jasińskiego, NIP 5222868457, Regon 141172460,
+          KRS 0001064882. Administratorem danych osobowych w ramach realizacji
+          larpów jest Centrum Kultury Podgórza, szczegółowe informacje znajdują
+          się na stronie internetowej Centrum:
+          <a href="http://www.ckpodgorza.pl/regulaminy" target="_blank" rel="noopener">
+            www.ckpodgorza.pl/regulaminy</a>.
+        </p>
         <label class="checkline">
-          <input type="checkbox" id="consent-marketing" />
-          <span>Chcę otrzymywać informacje o wydarzeniu drogą mailową (nieobowiązkowe).</span>
+          <input type="checkbox" id="consent-strefazajec" required aria-describedby="consent-error" />
+          <span>Oświadczam, że się zapoznał*m.</span>
         </label>
+        </div>
+
+        <div class="q">
+          <label class="q-label" id="consent-rules-label">
+            <strong>Regulamin wydarzenia.</strong> <span class="req">*</span>
+          </label>
+          <p id="rules-link-note" class="blurb"></p>
+          <label class="checkline">
+            <input type="checkbox" id="consent-rules" required aria-describedby="consent-error" />
+            <span id="consent-rules-text">Zapoznałem się z regulaminem wydarzenia.</span>
+          </label>
+        </div>
+
+        <div class="q">
+          <label class="q-label" id="consent-photo-label">
+            <strong>Wyrażam zgodę na fotografowanie i/lub nagrywanie mojego wizerunku w celach
+            promocyjnych i marketingowych wydarzenia.</strong> <span class="req">*</span>
+          </label>
+          <p class="blurb">
+            Każde zdjęcie zostanie przesłane Ci do weryfikacji przed publikacją.
+          </p>
+          <div id="consent-photo-group" role="radiogroup" aria-labelledby="consent-photo-label" aria-describedby="consent-photo-error">
+            <label class="checkline">
+              <input type="radio" name="consent-photo" id="consent-photo-yes" value="tak" />
+              <span>Wyrażam zgodę</span>
+            </label>
+            <label class="checkline">
+              <input type="radio" name="consent-photo" id="consent-photo-other" value="inne" />
+              <span>Inne:
+                <input type="text" id="consent-photo-other-text" class="inline-text"
+                       placeholder="np. tak, ale bez zdjęć twarzy" aria-label="Doprecyzuj swoją odpowiedź" />
+              </span>
+            </label>
+          </div>
+          <p class="field-error" id="consent-photo-error" aria-live="polite"></p>
+        </div>
+        <div class="q">
+          <label class="q-label" id="consent-marketing-label">
+            <strong>Czy wyrażasz zgodę na otrzymywanie informacji o wydarzeniu drogą mailową?</strong>
+            <span class="req">*</span>
+          </label>
+          <div id="consent-marketing-group" role="radiogroup" aria-labelledby="consent-marketing-label" aria-describedby="consent-marketing-error">
+            <label class="checkline">
+              <input type="radio" name="consent-marketing" id="consent-marketing-yes" value="tak" />
+              <span>Wyrażam zgodę</span>
+            </label>
+            <label class="checkline">
+              <input type="radio" name="consent-marketing" id="consent-marketing-other" value="inne" />
+              <span>Inne:
+                <input type="text" id="consent-marketing-other-text" class="inline-text"
+                       placeholder="np. nie" aria-label="Doprecyzuj swoją odpowiedź" />
+              </span>
+            </label>
+          </div>
+          <p class="field-error" id="consent-marketing-error" aria-live="polite"></p>
+        </div>
         <p class="field-error" id="consent-error" aria-live="polite"></p>
       </section>
 
@@ -180,7 +337,10 @@
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
 
-    <footer><span id="footer-contact"></span></footer>
+    <footer>
+      <p>Jakub "Gandi" Wasielak dla Festiwalu Krak-ON.</p>
+      <p id="footer-contact"></p>
+    </footer>
   </main>
 
   <script src="config.js"></script>

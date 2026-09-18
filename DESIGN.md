@@ -123,6 +123,23 @@ the submission payload at submit time (`collect()`), so the organiser sees a
 frozen snapshot of what the player saw, not just raw preference numbers they'd
 have to recompute themselves.
 
+**The −2..+2 rating buttons show a face icon, not the number.** `faceIcon(v)`
+draws a two-dot-eyes-plus-one-mouth-curve SVG where the mouth's control point
+is a direct function of `v` (frown "∩" for negative, smile "◡" for positive,
+flat at 0) — one small function generates all 5 positions, not five hand-drawn
+icons. Unselected buttons also get a faint diverging red/green background tint
+(`segTint(v)`, using the page's existing `--danger`/`--ok` colors at low
+alpha) so the row reads left-to-right as dislike→like before a player reads
+any label. This is a deliberately *bipolar* red-green use, unlike the match-%
+bars' single-hue ramp (§ bar color decision) — it's safe here because each of
+the 5 positions is also distinguished by shape (a different mouth curve) and
+fixed left-to-right order, not by color alone, so it doesn't have the
+color-only-encoding problem a continuous red-green gradient would. The tint is
+applied via a `--tint` custom property set inline per button, consumed by
+`.seg span { background: var(--tint, #fff); }`, specifically so it can't
+out-specificity `.seg input:checked + span { background: var(--accent); }` —
+setting `background` directly inline would have.
+
 ## 6. State management in `app.js`
 
 - `data` — the fetched `larps.json`, loaded once at `init()`, treated as
@@ -195,6 +212,100 @@ have to recompute themselves.
 These are absent by omission, not oversight — flagging them so a future
 session doesn't have to rediscover them by reading code:
 
+- **Privacy notice content is deliberately copied from Krak-ON's own
+  published sources, not independently worded — and went through two rounds
+  of correction as a closer source turned up each time.** Earlier drafts used
+  `controller.name` = the full 3-organiser list from the regulamin's §1
+  ("who runs the festival") and a made-up `retention` value ("do 60 dni po
+  festiwalu"). Both were wrong: running an event and being its RODO data
+  controller are different questions with different answers here, and the
+  regulamin states no concrete retention period at all ("przez okres
+  niezbędny do realizacji celu"). Round 2 corrected `controller.name` to the
+  single administrator named in the regulamin's own photo-scoped RODO clause
+  (Stowarzyszenie Terra Futura alone) — but that clause turned out to be
+  narrower than the *general* data-processing consent on the real, currently
+  live Krak-ON Google sign-on form, whose own text names two co-administrators
+  ("...Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza"). Round 3
+  matched that instead, since it's the most specific and most current source
+  for what this form's own consent actually covers. The `retention` config
+  field was removed entirely (a still-optional field showing nothing is
+  functionally identical to no field, and a stale-looking unused config key
+  invites someone to "helpfully" fill it back in with another guess), and the
+  "Twoje prawa" rights list was expanded to match the real form's own list
+  (access, rectification, erasure, restriction, portability, consent
+  withdrawal, UODO complaint) instead of the shorter ad-hoc version that
+  shipped first. Same round: the **photo/video and marketing-email consent
+  questions were changed from checkboxes to a required-answer-not-
+  required-agreement "Wyrażam zgodę" / "Inne" (free text) choice**, matching
+  the real form's own options exactly rather than a generic "Tak"/"Nie" —
+  implemented once as a shared pattern (`getYesOtherAnswer` /
+  `validateYesOtherAnswer` / `wireYesOtherField` in `app.js`, driven by the
+  `#{name}-group`/`#{name}-yes`/`#{name}-other`/`#{name}-other-text`/
+  `#{name}-error` id convention) and reused for both fields rather than
+  duplicated. Afterparty interest was also changed from yes/no to tri-state
+  Tak/Nie/Może to match the real form. If Krak-ON's regulamin or sign-on form
+  change their wording later, this form's copy needs to move with it — there's
+  no mechanism that keeps them in sync automatically, and there isn't a good
+  one available (both are normal web pages, not an API).
+  **Round 4** went further: the custom-written `renderPrivacy()` summary
+  (`config.js.controller`/`processorNote` templated into a few sentences) and
+  the ad-hoc "Twoje prawa" rights list were removed entirely and replaced
+  with Centrum Kultury Podgórza's actual, complete "Informacja dotycząca
+  przetwarzania danych osobowych" — the real form's own RODO notice text
+  (sections I-X), pasted verbatim into `index.html` as static markup inside a
+  `<details class="rodo-notice">`, not templated or reworded at all. A second
+  verbatim block, the strefazajec.pl payment-processor disclosure, was added
+  the same way — its full "Oświadczam, że zostałem poinformowany..." text
+  *is* the checkbox's own label, not a summary of it. A third, new checkbox
+  ("Zapoznałem się z regulaminem wydarzenia") keeps the regulamin
+  confirmation, now preceded by its own "Regulamin wydarzenia dostępny jest
+  pod adresem: ..." line instead of being folded into the checkbox label
+  itself. `renderPrivacy()` is gone from `app.js`; `config.js.processorNote`
+  was deleted (unused once `renderPrivacy()` was removed — same "don't leave
+  a stale config key lying around" reasoning as the `retention` field
+  removal above). **This surfaces an unresolved discrepancy worth flagging
+  rather than silently resolving a fourth time:** the verbatim notice names
+  its administrator as Centrum Kultury Podgórza *alone*, while
+  `config.js.controller.name` still holds Round 3's two-organiser value
+  ("Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza"), used in the
+  footer's erasure-contact line and nowhere else now that the privacy-notice
+  rendering is gone. Round 3's source (the general-consent checkbox text on
+  the live Google Form) and this round's source (the complete, from-the-org
+  RODO notice) may simply be scoped differently — the two-org phrasing could
+  cover the *festival's* general consent while the notice covers this
+  specific *venue's* own RODO administrator role — but that's a guess, not a
+  verified fact; whether `controller.name`/`controller.email` should still
+  read "Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza" or should
+  be corrected to match the notice's own contact channels
+  (`sekretariat@ckpodgorza.pl`, IOD `iod@ckpodgorza.pl`) needs the organiser's
+  own confirmation before either is guessed at again.
+  **Round 5**, immediately after: two presentation-only changes, no new
+  discrepancies. First, **every consent question's markup was unified into
+  one repeated shape** — a bold `<strong>` statement of what's being asked,
+  then an *optional* supplementary section (the RODO `<details>`, a plain
+  paragraph for strefazajec.pl/regulamin, or nothing for marketing-email),
+  then the actual selectable option(s) at normal (unbolded) weight. This
+  also fixed a real inconsistency the unification pass surfaced: the
+  marketing-email question's label had never been bolded like the
+  photo-consent one was, despite both following the same
+  `getYesOtherAnswer` pattern — now both are. Second, the photo-consent
+  blurb ("Zdajemy sobie sprawę, że niektóre larpy mają tematykę
+  kontrowersyjną — zdjęcia z takich gier zostaną przed publikacją przesłane
+  do weryfikacji uczestnikom") was replaced with a shorter, broader
+  statement that *all* photos (not just ones from "controversial" larps) get
+  sent back to the player for verification before publishing — a real
+  process commitment, not just copy trimming, so if that's not actually the
+  organiser's intended review process this needs correcting before launch.
+  **Also in Round 5, unrelated to consent:** afterparty, which Round 3 had
+  deliberately changed from plain checkboxes to tri-state Tak/Nie/Może to
+  match the official form exactly, was reverted back to plain optional
+  checkboxes ("Chcę wziąć udział w afterparty w piątek/w sobotę") on
+  explicit user preference — the simpler control was judged better here even
+  though it means this one field no longer mirrors the official form's own
+  shape (`getAfterpartyAnswer()` removed from `app.js`; `afterparty.friday`/
+  `.saturday` are plain booleans again, `schemaVersion` 8). This is a
+  deliberate, acknowledged divergence, not an oversight — don't "fix" it
+  back to tri-state without asking first.
 - **No capacity enforcement.** `larps.json → larps[].players` (headcount) is
   parsed but never used. Nothing stops more players from prioritizing a larp
   than it has seats; that reconciliation is implicitly left to the organiser
@@ -316,7 +427,7 @@ session doesn't have to rediscover them by reading code:
 | Change | Where |
 |---|---|
 | Add/edit larps, timeslots, tags, triggers, character preferences, ticket tiers | `larps.json` only |
-| Event name, retention text, controller contact, rules link, endpoint URL | `config.js` only |
+| Event name, controller contact, rules link, endpoint URL | `config.js` only |
 | Change match % formula or scale bands | `likeliness()` / `likeLabel()` in `app.js` |
 | Change max picks per slot | `MAX_PICKS` in `app.js` |
 | Change submission schema | `collect()` in `app.js` **and** update `SPEC.md` §6 + bump `schemaVersion` |

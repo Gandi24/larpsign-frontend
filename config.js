@@ -26,24 +26,19 @@ window.CONFIG = {
   // realnej ochrony (np. przed spamem), to inny temat (patrz DESIGN.md).
   submitSecret: "cRA5VFM3q4IHo0IpOTpZfOOSeqAOtZQV",
 
-  // RODO — administrator danych (czyli Wy / ekipa organizacyjna).
+  // RODO — administrator danych. Nazwa dokładnie jak w zgodzie ogólnej
+  // oficjalnego formularza zapisów Krak-ON ("Wyrażam zgodę na przetwarzanie
+  // moich danych osobowych... przez Stowarzyszenie Terra Futura oraz
+  // Centrum Kultury Podgórza") — nie z §1 regulaminu (ta lista organizatorów
+  // Festiwalu jest szersza niż administrator danych osobowych) ani z
+  // regulaminu's samej klauzuli RODO (ta jest zawężona do zdjęć).
   controller: {
-    name: "Ekipa festiwalowa",
-    email: "zapisy@example.org", // tu trafiają prośby o usunięcie danych
+    name: "Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza",
+    email: "festiwalkrakon@gmail.com", // tu trafiają prośby o usunięcie danych
   },
-
-  // RODO — jak długo trzymacie dane, zanim je usuniecie.
-  retention: "do 60 dni po festiwalu, potem trwale usuwane",
 
   // Link do regulaminu wydarzenia, pokazywany przy zgodzie "zapoznałam się
   // z regulaminem". Zostaw "", jeśli nie masz jeszcze regulaminu online —
   // zgoda i tak się pojawi, tylko bez linku.
-  rulesUrl: "",
-
-  // RODO — gdzie fizycznie leżą dane (informacja o procesorze).
-  processorNote:
-    "Zgłoszenie w drodze do zapisu przechodzi przez Google Apps Script " +
-    "(Google LLC, USA), a następnie jest zapisywane jako plik w prywatnym " +
-    "repozytorium GitHub (GitHub Inc., USA), dostępnym wyłącznie dla ekipy " +
-    "organizacyjnej. Google nie przechowuje kopii zgłoszenia.",
+  rulesUrl: "https://krak-on.info/regulamin",
 };
