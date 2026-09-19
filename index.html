@@ -247,9 +247,10 @@
             międzynarodowych oraz państw trzecich.</p>
         </details>
         <label class="checkline">
-          <input type="checkbox" id="consent-rodo" required aria-describedby="consent-error" />
+          <input type="checkbox" id="consent-rodo" required aria-describedby="consent-rodo-error" />
           <span>Zapoznał*m się z powyższą informacją.</span>
         </label>
+        <p class="field-error" id="consent-rodo-error" aria-live="polite"></p>
         </div>
 
         <div class="q">
@@ -268,9 +269,10 @@
             www.ckpodgorza.pl/regulaminy</a>.
         </p>
         <label class="checkline">
-          <input type="checkbox" id="consent-strefazajec" required aria-describedby="consent-error" />
+          <input type="checkbox" id="consent-strefazajec" required aria-describedby="consent-strefazajec-error" />
           <span>Oświadczam, że się zapoznał*m.</span>
         </label>
+        <p class="field-error" id="consent-strefazajec-error" aria-live="polite"></p>
         </div>
 
         <div class="q">
@@ -279,9 +281,10 @@
           </label>
           <p id="rules-link-note" class="blurb"></p>
           <label class="checkline">
-            <input type="checkbox" id="consent-rules" required aria-describedby="consent-error" />
-            <span id="consent-rules-text">Zapoznałem się z regulaminem wydarzenia.</span>
+            <input type="checkbox" id="consent-rules" required aria-describedby="consent-rules-error" />
+            <span>Zapoznałem się z regulaminem wydarzenia.</span>
           </label>
+          <p class="field-error" id="consent-rules-error" aria-live="polite"></p>
         </div>
 
         <div class="q">
@@ -327,7 +330,6 @@
           </div>
           <p class="field-error" id="consent-marketing-error" aria-live="polite"></p>
         </div>
-        <p class="field-error" id="consent-error" aria-live="polite"></p>
       </section>
 
       <div class="actions">

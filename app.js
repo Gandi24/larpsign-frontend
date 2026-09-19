@@ -58,11 +58,19 @@ function validateCharPrefs() {
   return ok;
 }
 
-function validateConsents() {
-  const ok = $("#consent-rodo").checked && $("#consent-strefazajec").checked && $("#consent-rules").checked;
-  $(".consent").classList.toggle("invalid", !ok);
-  const errorEl = $("#consent-error");
-  if (errorEl) errorEl.textContent = ok ? "" : "Zaznacz wszystkie wymagane zgody powyżej.";
+// Trzy niezależne wymagane checkboxy (RODO, strefazajec.pl, regulamin) —
+// każdy dostaje własny inline błąd tuż pod sobą, jak każde inne wymagane
+// pole w tym formularzu (patrz DESIGN.md §6), zamiast jednego wspólnego
+// komunikatu daleko na dole karty, który nie mówi, KTÓRY checkbox brakuje.
+const REQUIRED_CONSENT_CHECKBOXES = ["consent-rodo", "consent-strefazajec", "consent-rules"];
+
+function validateRequiredCheckbox(id) {
+  const el = document.getElementById(id);
+  const ok = el.checked;
+  const line = el.closest(".checkline");
+  if (line) line.classList.toggle("bad", !ok);
+  const errorEl = document.getElementById(`${id}-error`);
+  if (errorEl) errorEl.textContent = ok ? "" : "To pole jest wymagane.";
   return ok;
 }
 
@@ -328,8 +336,8 @@ async function init() {
     });
   });
   $("#char-prefs").addEventListener("change", validateCharPrefs);
-  ["#consent-rodo", "#consent-strefazajec", "#consent-rules"].forEach((sel) =>
-    $(sel).addEventListener("change", validateConsents)
+  REQUIRED_CONSENT_CHECKBOXES.forEach((id) =>
+    $(`#${id}`).addEventListener("change", () => validateRequiredCheckbox(id))
   );
   // Wpisanie tekstu w "Inne" samo zaznacza ten wybór — jak w Google Forms.
   ["consent-photo", "consent-marketing"].forEach(wireYesOtherField);
@@ -740,7 +748,9 @@ function validate() {
   });
 
   note(validateCharPrefs(), $("#char-prefs"));
-  note(validateConsents(), $(".consent"));
+  REQUIRED_CONSENT_CHECKBOXES.forEach((id) =>
+    note(validateRequiredCheckbox(id), document.getElementById(id))
+  );
   ["consent-photo", "consent-marketing"].forEach((name) =>
     note(validateYesOtherAnswer(name), $(`#${name}-group`))
   );
