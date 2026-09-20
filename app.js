@@ -433,6 +433,7 @@ function getCharacterPreferences() {
   return [...document.querySelectorAll('[name="charpref"]:checked')].map((n) => n.value);
 }
 
+
 // --- Złoty Bilet: do 3 uszeregowanych wyborów, z pełnej listy larpów -------
 
 function allLarpNames() {
@@ -534,6 +535,14 @@ function dislikesHTML(larp, ratings) {
   return `<div class="lc-warn">👎 Możesz nie polubić: ${labels.map(esc).join(", ")}</div>`;
 }
 
+// larp.language jest ustawione tylko dla larpów NIE po polsku — brak pola
+// znaczy polski, nic do pokazania. Zawsze widoczna etykieta przy nazwie,
+// niezależna od tego, czy gracz zna ten język — to informacja o larpie,
+// nie osobista ocena.
+function languageBadgeHTML(larp) {
+  return larp.language ? `<span class="lc-lang">🌐 ${esc(larp.language)}</span>` : "";
+}
+
 function ticketSelectHTML(slot, name, ticketTier, i) {
   const options = (data.ticketTiers || [])
     .map(
@@ -567,7 +576,7 @@ function renderSlots() {
                 <span class="prio">${i + 1}</span>
                 <div class="ti-main">
                   <div class="lc-head">
-                    <span class="lc-name">${esc(pick.name)}</span>
+                    <span class="lc-name">${esc(pick.name)}${languageBadgeHTML(larp)}</span>
                     <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
                   </div>
                   ${dislikesHTML(larp, ratings)}
@@ -596,7 +605,7 @@ function renderSlots() {
           ({ larp, pct }) => `<div class="larp-card">
             <div class="lc-body">
               <div class="lc-head">
-                <span class="lc-name">${esc(larp.name)}</span>
+                <span class="lc-name">${esc(larp.name)}${languageBadgeHTML(larp)}</span>
                 <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
               </div>
               <div class="bar"><i style="width:${pct}%; background:${likelinessColor(pct)}"></i></div>

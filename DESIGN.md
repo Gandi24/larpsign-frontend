@@ -158,7 +158,7 @@ setting `background` directly inline would have.
 - Render pattern: any state change calls the relevant `render*()` function,
   which does a full `innerHTML` replace of its container (no diffing, no
   virtual DOM, no component framework). At this data volume (4 slots, 26
-  larps, 31 tags, 75 triggers across 11 groups) full re-render is cheap
+  larps, 32 tags, 77 triggers across 11 groups) full re-render is cheap
   enough that this is a reasonable, low-complexity choice rather than a
   limitation to fix.
 - `larpByName(slot, name)` — larps are looked up **by name string**, not id.
@@ -406,7 +406,7 @@ session doesn't have to rediscover them by reading code:
   tags/triggers from the organiser's own sheet — no longer titles/authors
   guesses. That sheet's raw vocabulary was ~90 tags and ~93 triggers, almost
   all used by only one larp (a folksonomy, not a rating scale). `preferenceTags`
-  (31) and `triggerGroups` (11 groups, 75 triggers) are a manual unification
+  (32, see below) and `triggerGroups` (11 groups, 77 triggers) are a manual unification
   done together with the organiser — merging near-duplicates, splitting
   compound raw values (e.g. `rasizm/dyskryminacja` → two separate triggers),
   dropping ~20 items judged too narrow/branded to be a reusable category
@@ -417,6 +417,75 @@ session doesn't have to rediscover them by reading code:
   it won't just re-run against new data, see that folder's own README for
   why and what to do instead. The source CSV itself was never committed;
   it carried real GMs' emails/phones/Discord handles.
+- **The 2026-09-18 unification wasn't the last word — a 2026-09-20 organiser
+  feedback round reshaped part of it, this time from *player experience*
+  complaints rather than a raw-tag folksonomy problem.** "Rytuał / duchowość
+  / folklor" was one tag standing in for two things players feel oppositely
+  about — a character devoted to *local folklore/tradition* vs. one devoted
+  to *religion/the divine* — split into "Duchowość / religia" and "Folklor /
+  obrzędy". Deciding which of the 6 affected larps got which (or
+  neither) wasn't done from the tag name alone: each larp's actual
+  description was read (from the organiser's shared doc) to judge it — e.g.
+  "Nie ufaj tengu w onsenie yokai" (explicitly tagged `#folklor_japoński` by
+  its own author) is Folklor. First pass also put "Kult Bachusa i Astarte"
+  (a ritual literally invoking named gods) under Duchowość/religia — the
+  organiser walked that back on review, so it now carries neither of the two
+  split tags, just its other three. That correction is itself worth keeping
+  in mind: reading a description and picking the "obviously" fitting new tag
+  isn't the same as the organiser's own judgment of whether the tag actually
+  belongs, even when the reasoning sounds solid. "Nietypowa forma /
+  eksperyment" was dropped outright rather than replaced — the 3 larps
+  carrying it turned out to be structurally unrelated (a vignette-scene
+  theatrical piece, a Szekspir jeepform/metagra, a Japanese-folklore murder
+  mystery), so a single shared tag was misrepresenting a commonality that
+  didn't exist; each keeps its other, more specific tags instead. "Ekspresja
+  ciałem / larp bez słów" and "Oniryzm / surrealizm" were trimmed to "Larp
+  bez słów" and "Oniryzm" — confirmed against the data first, not just taste:
+  every larp with the "ciałem" tag already carried "Taniec / larp ruchowy"
+  too (so nothing was reclassified, just shortened), and "surrealizm" turned
+  out to be entirely unused across the whole programme. "Orientalne" was
+  added and applied to the one larp explicitly built around Japanese
+  folklore/anime aesthetics — added to the vocabulary but intentionally not
+  forced onto looser candidates (e.g. "Awatar: Rozdroża", Avatar-inspired
+  but not itself specifically Orientalist) without the organiser confirming
+  the read. On the trigger side: "Wykluczenie" renamed "Wykluczenie /
+  ostracyzm" (same trigger, clarified wording, both existing usages
+  updated); "Bycie ofiarą przemocy" / "Bycie sprawcą przemocy" added to
+  Przemoc for players who care which *side* of on-screen violence their
+  character is on (not the same axis as violence *type*, which the existing
+  Przemoc sub-triggers already cover) — applied to "River Tale...", the one
+  larp whose description explicitly splits characters into
+  invaders/collaborators/revolutionaries vs. innocent victims. All of this
+  needed a real source, same discipline as the RODO content in §7 above —
+  it came from the organiser's own larp-description doc
+  (`.scratch/2026-krakon-tag-trigger-unification/gen_larps.py`'s header
+  comments link the doc used), not from guessing at what a larp "probably"
+  covers from its title alone.
+- **New feature this round: a language badge, deliberately simplified
+  mid-flight.** Two larps in the programme aren't in Polish (an English one,
+  a Belarusian one whose written materials are in Russian per the
+  organiser). The first version personalized this: a "which languages do you
+  know" checklist plus a conditional `.lc-warn` note that only showed up if
+  the larp's language wasn't among the player's ticks (mirroring
+  `dislikesHTML()` exactly, including a new `languages` top-level vocabulary
+  array and per-player `languages` field in the submission, `schemaVersion`
+  9). The user rejected that on review — wanted, verbatim, "just mark
+  visibly next to larp's name that this game is played in other language
+  than polski." That's unconditional information about the *larp*, not a
+  personalized judgment about the player, so the whole "known languages"
+  side was removed: no question, no checklist, no per-player field, no
+  `schemaVersion` bump (reverted to 8 — the payload shape ended up identical
+  to before this round started). What's left is `larps.json`'s per-larp
+  optional `language` field (absence = Polish, not "unknown") and
+  `languageBadgeHTML()` in `app.js`, which renders a small `🌐 <language>`
+  badge directly next to `.lc-name` whenever it's set — always, not
+  conditionally — in both the "available" card and an already-added tray
+  item. Worth remembering for next time a "warn the player about X" feature
+  comes up: check first whether X is actually about the player (→
+  conditional, personalized, `dislikesHTML()`-style) or about the larp
+  itself (→ unconditional badge, no new question needed) — this one started
+  as the former by default-assuming symmetry with triggers/dislikes, when it
+  was actually the latter.
 - **Character-preference and consent-marketing state is a folksonomy risk in
   miniature, but small enough not to need the tag treatment above.**
   `characterPreferences` stayed a flat 3-item list; no unification was needed

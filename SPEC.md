@@ -26,7 +26,25 @@ question's markup was unified into one repeated shape — bold statement,
 optional expandable/link section, unbolded selectable option(s) — with the
 photo-consent blurb rewritten to state that *all* photos (not just
 "controversial" larps') get sent back for verification before publishing —
-see §2 items 6-7 and §6. This describes
+see §2 items 6-7 and §6. The next day (2026-09-20), a round of organiser
+feedback on the tag/trigger taxonomy: `preferenceTags` went from 31 to 32
+entries — "Rytuał / duchowość / folklor" split into "Duchowość / religia"
+and "Folklor / obrzędy" (5 larps reclassified by reading each
+one's actual description, not guessed from the tag name alone — one further
+larp initially assigned to "Duchowość / religia" was walked back to neither
+new tag on a second pass); "Nietypowa forma / eksperyment" dropped outright
+as too broad to discriminate anything; "Ekspresja ciałem / larp bez słów"
+renamed to "Larp bez słów" (redundant with "Taniec / larp ruchowy", which
+both larps carrying it already had too); "Oniryzm / surrealizm" renamed to
+"Oniryzm" (surrealizm was never actually used by any larp); "Orientalne"
+added and applied to one larp. Triggers: "Wykluczenie" renamed "Wykluczenie
+/ ostracyzm"; "Bycie ofiarą przemocy" / "Bycie sprawcą przemocy" added to
+the Przemoc group, applied to one larp with explicit victim/perpetrator
+character roles. Two larps in the programme aren't in Polish — rather than
+a personalized "known languages" question, each now just carries a fixed,
+always-visible 🌐 badge next to its name wherever it appears
+(`larps.json`'s per-larp `language` field, unset means Polish; no payload/
+schema change, this is display-only). This describes
 what the code *does* — for what's actually deployed right now vs. just built
 and tested, see `DESIGN.md` §10.
 Scope: what the system does and the rules it follows. For *how it's built and why*, see `DESIGN.md`.
@@ -49,7 +67,7 @@ can pick their top choices per slot without prior knowledge of the games.
    `Nie znoszę / Raczej nie / Obojętne / Lubię / Uwielbiam`. Defaults to 0 (neutral).
 3. **Triggery** — tick any number of triggers from `larps.json → triggerGroups`,
    presented as 11 collapsible categories (e.g. "Przemoc", "Zdrowie psychiczne
-   i trauma") rather than one flat list — 75 triggers is too many to scan
+   i trauma") rather than one flat list — 77 triggers is too many to scan
    un-grouped. A collapsed category shows up to 3 of its checked trigger names
    plus a "+N" overflow count, so a player never has to reopen a category to
    remember what they ticked there.
@@ -110,10 +128,10 @@ re-sorts every slot (`change` listener on the form, §5).
 
 ```jsonc
 {
-  "preferenceTags": [{ "id": "scifi", "label": "Science fiction" }, ...],   // 31 tags
+  "preferenceTags": [{ "id": "scifi", "label": "Science fiction" }, ...],   // 32 tags
   "triggerGroups": [
     { "id": "przemoc", "label": "Przemoc", "triggers": ["Przemoc", "Gore", ...] }
-    // 11 groups, 75 triggers total
+    // 11 groups, 77 triggers total
   ],
   "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
   "ticketTiers": [
@@ -125,7 +143,9 @@ re-sorts every slot (`change` listener on the form, §5).
       "larps": [
         { "name": "La Candela", "players": 32,
           "tags": ["taniec_ruch", "cialo", "emocje"],
-          "triggers": ["Śmierć", "Żałoba", "Ciemność"] }
+          "triggers": ["Śmierć", "Żałoba", "Ciemność"] },
+        { "name": "Gra ludowa", "players": 14, "language": "Białoruski",
+          "tags": ["historia", "komedia"], "triggers": [...] }
       ]
     }
   ]
@@ -145,6 +165,10 @@ re-sorts every slot (`change` listener on the form, §5).
   rendered as a checkbox group; the player's ticks are collected but not
   joined against any per-larp data — it's informational for casting, not
   part of matching.
+- `larps[].language` (singular, optional string) marks a larp as **not**
+  Polish — its absence means Polish, not "unknown". Purely display: it drives
+  the `🌐 <language>` badge next to the larp's name (§4), nothing else reads
+  it and it isn't collected from the player.
 - `ticketTiers[]` is `{ id, label, price }`; `id` is the join key used by each
   slot pick's `ticketTier` in the submission (§6). Price is a display string,
   not a machine-parsed amount — this system has no payment processing; ticket
@@ -177,6 +201,12 @@ warning.
 **Trigger conflicts**: any trigger on the larp that the player has ticked is
 shown inline on every card, bolded, red, prefixed `⚠`, both in "Twoje wybory"
 and "Pozostałe". This is a safety flag, computed independently of match %.
+
+**Language badge**: a larp whose `language` field is set (i.e. not Polish)
+shows a `🌐 <language>` badge right next to its name, in both "Twoje wybory"
+and "Pozostałe" (`languageBadgeHTML()` in `app.js`). Unconditional — it's
+information about the larp itself, not a personalized warning, so it isn't
+gated behind any player input.
 
 **Sort order**: within a slot, un-picked larps ("Pozostałe") are sorted purely
 by descending match %. Picked larps ("Twoje wybory") keep the player's manual

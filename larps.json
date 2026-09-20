@@ -6,8 +6,12 @@
       "label": "Silne emocje / dramat"
     },
     {
-      "id": "rytual",
-      "label": "Rytuał / duchowość / folklor"
+      "id": "duchowosc",
+      "label": "Duchowość / religia"
+    },
+    {
+      "id": "folklor",
+      "label": "Folklor / obrzędy"
     },
     {
       "id": "tajemnica",
@@ -24,10 +28,6 @@
     {
       "id": "sensualnosc",
       "label": "Sensualność / zmysłowość"
-    },
-    {
-      "id": "eksperyment",
-      "label": "Nietypowa forma / eksperyment"
     },
     {
       "id": "scifi",
@@ -47,7 +47,7 @@
     },
     {
       "id": "cialo",
-      "label": "Ekspresja ciałem / larp bez słów"
+      "label": "Larp bez słów"
     },
     {
       "id": "groza",
@@ -71,7 +71,7 @@
     },
     {
       "id": "oniryzm",
-      "label": "Oniryzm / surrealizm"
+      "label": "Oniryzm"
     },
     {
       "id": "swiat_mroku",
@@ -124,6 +124,10 @@
     {
       "id": "refleksja",
       "label": "Refleksja / filozofia"
+    },
+    {
+      "id": "orientalne",
+      "label": "Orientalne"
     }
   ],
   "triggerGroups": [
@@ -156,7 +160,9 @@
         "Agresja",
         "Broń palna",
         "Zemsta",
-        "Wulgarny język"
+        "Wulgarny język",
+        "Bycie ofiarą przemocy",
+        "Bycie sprawcą przemocy"
       ]
     },
     {
@@ -209,7 +215,7 @@
         "Rasizm",
         "Dyskryminacja",
         "Seksizm",
-        "Wykluczenie"
+        "Wykluczenie / ostracyzm"
       ]
     },
     {
@@ -269,12 +275,32 @@
       ]
     }
   ],
-  "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
+  "characterPreferences": [
+    "Kobiece",
+    "Męskie",
+    "Niebinarne"
+  ],
   "ticketTiers": [
-    { "id": "tworcy", "label": "Bilet dla Twórców (MG, opiekunów larpowych)", "price": "40 zł" },
-    { "id": "spoleczny", "label": "Bilet Społeczny", "price": "40 zł" },
-    { "id": "standardowy", "label": "Bilet Standardowy", "price": "100 zł" },
-    { "id": "wsparcia", "label": "Bilet Wsparcia", "price": "140 zł" }
+    {
+      "id": "tworcy",
+      "label": "Bilet dla Twórców (MG, opiekunów larpowych)",
+      "price": "40 zł"
+    },
+    {
+      "id": "spoleczny",
+      "label": "Bilet Społeczny",
+      "price": "40 zł"
+    },
+    {
+      "id": "standardowy",
+      "label": "Bilet Standardowy",
+      "price": "100 zł"
+    },
+    {
+      "id": "wsparcia",
+      "label": "Bilet Wsparcia",
+      "price": "140 zł"
+    }
   ],
   "timeslots": [
     {
@@ -324,6 +350,29 @@
             "Morderstwo / zabójstwo",
             "Represje polityczne"
           ]
+        },
+        {
+          "name": "Starzy Przyjaciele",
+          "players": 8,
+          "tags": [
+            "groza",
+            "emocje",
+            "wspolnota"
+          ],
+          "triggers": [
+            "Duchy",
+            "Żałoba",
+            "Poczucie winy",
+            "Morderstwo / zabójstwo",
+            "Choroba terminalna",
+            "Kryzys psychiczny",
+            "Pobyt w instytucjach psychiatrycznych",
+            "Uzależnienia",
+            "Toksyczne relacje",
+            "Zdrada",
+            "Opętanie i utrata kontroli nad ciałem",
+            "Krzyk"
+          ]
         }
       ]
     },
@@ -338,7 +387,7 @@
           "tags": [
             "emocje",
             "polityka",
-            "rytual",
+            "duchowosc",
             "trudne_wybory"
           ],
           "triggers": [
@@ -379,7 +428,6 @@
           "name": "Kult Bachusa i Astarte",
           "players": 6,
           "tags": [
-            "rytual",
             "wspolczesnosc",
             "emocje",
             "napiecie"
@@ -421,8 +469,9 @@
         {
           "name": "Shadows of the forgotten",
           "players": 20,
+          "language": "Angielski",
           "tags": [
-            "rytual",
+            "folklor",
             "relacje",
             "emocje"
           ],
@@ -460,7 +509,7 @@
           "name": "(A)Gnosis",
           "players": 15,
           "tags": [
-            "rytual",
+            "duchowosc",
             "przemiana",
             "oniryzm"
           ],
@@ -501,8 +550,11 @@
             "sensualnosc"
           ],
           "triggers": [
+            "Samotność",
+            "Porzucenie / odrzucenie",
+            "Rozczarowania miłosne",
             "Bliskość fizyczna / dotyk",
-            "Rozczarowania miłosne"
+            "Treści erotyczne / zmysłowe"
           ]
         },
         {
@@ -541,8 +593,8 @@
           "tags": [
             "sensualnosc",
             "tajemnica",
-            "eksperyment",
-            "rytual"
+            "folklor",
+            "orientalne"
           ],
           "triggers": [
             "Ekspozycja ciała / bielizna"
@@ -604,8 +656,8 @@
         {
           "name": "Gra ludowa",
           "players": 14,
+          "language": "Białoruski",
           "tags": [
-            "eksperyment",
             "historia",
             "komedia"
           ],
@@ -621,7 +673,7 @@
           "name": "Hipisi, pigułki i przytulanie",
           "players": 11,
           "tags": [
-            "rytual",
+            "duchowosc",
             "walka",
             "sensualnosc"
           ],
@@ -636,7 +688,6 @@
           "name": "Na Dzień Świętego Kryspina!",
           "players": 20,
           "tags": [
-            "eksperyment",
             "emocje"
           ],
           "triggers": [
@@ -672,7 +723,9 @@
             "Rasizm",
             "Dyskryminacja",
             "Cierpienie",
-            "Przemoc wobec zwierząt"
+            "Przemoc wobec zwierząt",
+            "Bycie ofiarą przemocy",
+            "Bycie sprawcą przemocy"
           ]
         },
         {
@@ -688,30 +741,7 @@
             "Treści erotyczne / zmysłowe",
             "Zmieniające się światło",
             "Zmieniająca się muzyka",
-            "Wykluczenie"
-          ]
-        },
-        {
-          "name": "Starzy Przyjaciele",
-          "players": 8,
-          "tags": [
-            "groza",
-            "emocje",
-            "wspolnota"
-          ],
-          "triggers": [
-            "Duchy",
-            "Żałoba",
-            "Poczucie winy",
-            "Morderstwo / zabójstwo",
-            "Choroba terminalna",
-            "Kryzys psychiczny",
-            "Pobyt w instytucjach psychiatrycznych",
-            "Uzależnienia",
-            "Toksyczne relacje",
-            "Zdrada",
-            "Opętanie i utrata kontroli nad ciałem",
-            "Krzyk"
+            "Wykluczenie / ostracyzm"
           ]
         }
       ]

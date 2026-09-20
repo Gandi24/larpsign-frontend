@@ -17,23 +17,23 @@ with open(path, newline='', encoding='utf-8') as f:
 # ---------- preferenceTags ----------
 PREF_TAGS = [
     ("emocje", "Silne emocje / dramat"),
-    ("rytual", "Rytuał / duchowość / folklor"),
+    ("duchowosc", "Duchowość / religia"),
+    ("folklor", "Folklor / obrzędy"),
     ("tajemnica", "Tajemnica / śledztwo"),
     ("trudne_wybory", "Trudne wybory / dylematy moralne"),
     ("taniec_ruch", "Taniec / larp ruchowy"),
     ("sensualnosc", "Sensualność / zmysłowość"),
-    ("eksperyment", "Nietypowa forma / eksperyment"),
     ("scifi", "Science fiction"),
     ("przemiana", "Przemiana / transformacja postaci"),
     ("polityka", "Polityka / intryga"),
     ("romans", "Wątki romantyczne"),
-    ("cialo", "Ekspresja ciałem / larp bez słów"),
+    ("cialo", "Larp bez słów"),
     ("groza", "Groza / horror"),
     ("katastrofa", "Katastrofa / przetrwanie"),
     ("wojna_okupacja", "Wojna / okupacja"),
     ("wspolnota", "Umysł grupowy / wspólnota"),
     ("prl", "PRL / totalitaryzm"),
-    ("oniryzm", "Oniryzm / surrealizm"),
+    ("oniryzm", "Oniryzm"),
     ("swiat_mroku", "Świat mroku"),
     ("cyberpunk", "Cyberpunk"),
     ("historia", "Klimat historyczny"),
@@ -47,12 +47,22 @@ PREF_TAGS = [
     ("ekologia", "Ekologia / natura"),
     ("relacje", "Relacje i więzi"),
     ("refleksja", "Refleksja / filozofia"),
+    ("orientalne", "Orientalne"),
 ]
 
 TAG_MAP = {
     "dramat":"emocje", "traumy":"emocje", "melodramat":"emocje",
-    "rytuał":"rytual", "okultyzm":"rytual", "sekta":"rytual", "mistycyzm":"rytual",
-    "folklor japoński":"rytual", "etniczny":"rytual",
+    # 2026-09-20 organiser feedback round: "Rytuał / duchowość / folklor" was
+    # one tag covering two things people feel very differently about — a
+    # character devoted to LOCAL folklore/tradition vs. one devoted to
+    # religion/the divine. Split into duchowosc/folklor. There's no reliable
+    # raw-tag rule for which one a given larp gets — "rytuał"/"mistycyzm"
+    # describe both, and even "okultyzm"/"sekta"/"folklor japoński"/"etniczny"
+    # only look unambiguous after reading each larp's actual description. Do
+    # that per-larp read again for a future event rather than trusting a
+    # mapping here. "Nietypowa forma / eksperyment" was dropped outright (too
+    # broad to be a meaningful filter — jeepform, no character sheets, and
+    # antylarp all got the same tag).
     "taniec":"taniec_ruch", "gra ruchowa":"taniec_ruch",
     "niemy":"cialo",
     "bliskość fizyczna":"sensualnosc", "przytulanie":"sensualnosc", "zmysły":"sensualnosc",
@@ -75,7 +85,7 @@ TAG_MAP = {
     "trudne wybory":"trudne_wybory", "dylemat moralny":"trudne_wybory", "bycie tym złym":"trudne_wybory",
     "umysł grupowy":"wspolnota",
     "przemiana":"przemiana", "transformacja":"przemiana",
-    "metagra":"eksperyment", "jeepform":"eksperyment", "eksperymentalny":"eksperyment", "teatralny":"eksperyment",
+    "metagra": None, "jeepform": None, "eksperymentalny": None, "teatralny": None,
     "cyberpunk":"cyberpunk",
     "dokument":"reportaz", "dziennikarstwo":"reportaz", "debata":"reportaz",
     "hip hop":"realizm_osiedlowy", "osiedlowe akcje":"realizm_osiedlowy",
@@ -96,11 +106,11 @@ TAG_MAP = {
 # ---------- triggerGroups ----------
 TRIGGER_GROUPS = [
     ("smierc_zaloba", "Śmierć i żałoba", ["Śmierć","Śmierć bliskiej osoby","Śmierć własna","Żałoba","Utrata dziecka","Choroba terminalna","AIDS"]),
-    ("przemoc", "Przemoc", ["Przemoc","Morderstwo / zabójstwo","Gore","Tortury","Przemoc fizyczna","Przemoc domowa","Przemoc psychiczna","Przemoc seksualna","Przemoc wobec zwierząt","Agresja","Broń palna","Zemsta","Wulgarny język"]),
+    ("przemoc", "Przemoc", ["Przemoc","Morderstwo / zabójstwo","Gore","Tortury","Przemoc fizyczna","Przemoc domowa","Przemoc psychiczna","Przemoc seksualna","Przemoc wobec zwierząt","Agresja","Broń palna","Zemsta","Wulgarny język","Bycie ofiarą przemocy","Bycie sprawcą przemocy"]),
     ("wojna", "Wojna", ["Wojna","Ludobójstwo","Represje polityczne"]),
     ("zdrowie_psychiczne", "Zdrowie psychiczne i trauma", ["Trauma / PTSD","Samobójstwo","Szaleństwo","Kryzys psychiczny","Pobyt w instytucjach psychiatrycznych","Derealizacja","Wyparcie","Strach","Bezsilność","Brak nadziei / celu","Dehumanizacja","Cierpienie","Samotność","Poczucie winy"]),
     ("relacje_zdrada", "Relacje i zdrada", ["Zdrada","Toksyczne relacje","Manipulacja","Porzucenie / odrzucenie","Relacje patriarchalne","Dramaty rodzinne","Niepełna rodzina","Rozczarowania miłosne"]),
-    ("dyskryminacja", "Dyskryminacja", ["Rasizm","Dyskryminacja","Seksizm","Wykluczenie"]),
+    ("dyskryminacja", "Dyskryminacja", ["Rasizm","Dyskryminacja","Seksizm","Wykluczenie / ostracyzm"]),
     ("substancje", "Substancje", ["Alkohol / alkoholizm","Narkotyki / używki","Papierosy","Uzależnienia"]),
     ("seksualnosc_cielesnosc", "Treści seksualne i cielesne", ["Bliskość fizyczna / dotyk","Treści erotyczne / zmysłowe","Ekspozycja ciała / bielizna","Pornografia","Prostytucja","Ciąża w niesprzyjających warunkach","Niechciana ciąża"]),
     ("religia_nadprzyrodzone", "Religia i nadprzyrodzone", ["Religia","Okultyzm","Sekta","Duchy","Opętanie i utrata kontroli nad ciałem","Świętokradztwo","Zombie","Epidemia","Bunt maszyn"]),
@@ -139,7 +149,7 @@ def trig_map(raw):
         "dotyk i bliskość fizyczna (również w kontekście erotycznym)":["Bliskość fizyczna / dotyk","Treści erotyczne / zmysłowe"],
         "zmieniające się światło":["Zmieniające się światło"], "zmieniająca się muzyka":["Zmieniająca się muzyka"],
         "tematyka owadów (na grze nie pojawiają się prawdziwe owady, tylko ich symboliczne reprezentacje)":[],
-        "motyw wykluczenia":["Wykluczenie"],
+        "motyw wykluczenia":["Wykluczenie / ostracyzm"],
         "wykorzystanie miodu jako rekwizytu (możliwość pobrudzenia)":[],
         "wymagane czarne/ciemne":[], "wygodne ubrania":[],
         "relacje patriarchalne":["Relacje patriarchalne"], "utrata dziecka":["Utrata dziecka"],

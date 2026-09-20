@@ -5,13 +5,13 @@ enjoy — even if they never read the programme. The flow:
 
 1. **Kto się zapisuje** — name, contact, birthdate (18+ check), and character
    preferences.
-2. **Preferencje** — rate ~31 theme tags on a −2…+2 scale (Nie znoszę → Uwielbiam).
+2. **Preferencje** — rate ~32 theme tags on a −2…+2 scale (Nie znoszę → Uwielbiam).
 3. **Triggery** — tick the ones that affect you (yes/no), organized into ~11
-   collapsible categories (75 triggers total — too many to show as one flat list).
+   collapsible categories (77 triggers total — too many to show as one flat list).
 4. **Sloty** — in each of the 4 timeslots, the larps are auto-ranked by a computed
    **dopasowanie %** (from your ratings) and show a **bold trigger list** (yours
-   flagged in red). Click up to 4 per slot, in priority order, and choose a
-   **ticket tier** for each.
+   flagged in red) plus a 🌐 badge on any non-Polish larp. Click up to 4 per
+   slot, in priority order, and choose a **ticket tier** for each.
 5. **Afterparty** and **zgody** (consents) — optional afterparty interest, plus
    the required/optional GDPR consents.
 
@@ -123,8 +123,12 @@ Everything content-related lives here; no code changes needed.
   per-slot-pick ticket dropdown. `price` is a display string only — this
   form has no payment processing.
 - `timeslots` — `[{ id, name, time, larps: [...] }]`. Each larp has
-  `name`, `players`, `tags` (ids from `preferenceTags`), and `triggers`
-  (plain strings, matching one from some group in `triggerGroups`).
+  `name`, `players`, `tags` (ids from `preferenceTags`), `triggers`
+  (plain strings, matching one from some group in `triggerGroups`), and an
+  optional `language` (a free-form string — omit entirely for a
+  Polish-language larp, don't set it to a "Polski" value). When set, it
+  shows as a `🌐 <language>` badge next to the larp's name everywhere it
+  appears — purely informational, not collected from the player.
 
 **How dopasowanie % is computed:** the average of the player's ratings for that
 larp's `tags`, rescaled from [−2, +2] to [0, 100]. No ratings yet → 50% (neutral).
