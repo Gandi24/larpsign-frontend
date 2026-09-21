@@ -543,6 +543,13 @@ function languageBadgeHTML(larp) {
   return larp.language ? `<span class="lc-lang">🌐 ${esc(larp.language)}</span>` : "";
 }
 
+// larp.time jest ustawione tylko gdy dany larp ma inne godziny niż reszta
+// slotu (np. zaczyna się wcześniej) — slot.time w nagłówku karty slotu
+// pozostaje ogólnym oknem, to nadpisuje je widocznie dla tego jednego larpa.
+function timeBadgeHTML(larp) {
+  return larp.time ? `<span class="lc-time">🕐 ${esc(larp.time)}</span>` : "";
+}
+
 function ticketSelectHTML(slot, name, ticketTier, i) {
   const options = (data.ticketTiers || [])
     .map(
@@ -576,7 +583,7 @@ function renderSlots() {
                 <span class="prio">${i + 1}</span>
                 <div class="ti-main">
                   <div class="lc-head">
-                    <span class="lc-name">${esc(pick.name)}${languageBadgeHTML(larp)}</span>
+                    <span class="lc-name">${esc(pick.name)}${timeBadgeHTML(larp)}${languageBadgeHTML(larp)}</span>
                     <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
                   </div>
                   ${dislikesHTML(larp, ratings)}
@@ -605,7 +612,7 @@ function renderSlots() {
           ({ larp, pct }) => `<div class="larp-card">
             <div class="lc-body">
               <div class="lc-head">
-                <span class="lc-name">${esc(larp.name)}${languageBadgeHTML(larp)}</span>
+                <span class="lc-name">${esc(larp.name)}${timeBadgeHTML(larp)}${languageBadgeHTML(larp)}</span>
                 <span class="lc-pct">${pct}% · ${likeLabel(pct)}</span>
               </div>
               <div class="bar"><i style="width:${pct}%; background:${likelinessColor(pct)}"></i></div>

@@ -169,6 +169,10 @@ re-sorts every slot (`change` listener on the form, §5).
   Polish — its absence means Polish, not "unknown". Purely display: it drives
   the `🌐 <language>` badge next to the larp's name (§4), nothing else reads
   it and it isn't collected from the player.
+- `larps[].time` (optional string, same format as `timeslots[].time`) —
+  purely display, for the rare larp whose actual hours differ from its
+  slot's own window (e.g. starts an hour early). Drives the `🕐 <time>`
+  badge next to the larp's name (§4); absence means "same as the slot."
 - `ticketTiers[]` is `{ id, label, price }`; `id` is the join key used by each
   slot pick's `ticketTier` in the submission (§6). Price is a display string,
   not a machine-parsed amount — this system has no payment processing; ticket
@@ -207,6 +211,13 @@ shows a `🌐 <language>` badge right next to its name, in both "Twoje wybory"
 and "Pozostałe" (`languageBadgeHTML()` in `app.js`). Unconditional — it's
 information about the larp itself, not a personalized warning, so it isn't
 gated behind any player input.
+
+**Time badge**: a larp whose `time` field is set shows a `🕐 <time>` badge
+right next to its name, same two places (`timeBadgeHTML()` in `app.js`).
+For a larp whose actual hours differ from its slot's own displayed window
+(e.g. it starts earlier) — the slot header's time stays the general window,
+this overrides it visibly per-larp rather than silently under-informing the
+player.
 
 **Sort order**: within a slot, un-picked larps ("Pozostałe") are sorted purely
 by descending match %. Picked larps ("Twoje wybory") keep the player's manual

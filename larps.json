@@ -327,6 +327,7 @@
         {
           "name": "La Candela",
           "players": 32,
+          "time": "17:00–22:00 (5h)",
           "tags": [
             "taniec_ruch",
             "cialo",
@@ -511,7 +512,8 @@
           "tags": [
             "duchowosc",
             "przemiana",
-            "oniryzm"
+            "oniryzm",
+            "refleksja"
           ],
           "triggers": [
             "Religia",
@@ -597,6 +599,8 @@
             "orientalne"
           ],
           "triggers": [
+            "Śmierć",
+            "Morderstwo / zabójstwo",
             "Ekspozycja ciała / bielizna"
           ]
         },
@@ -620,7 +624,8 @@
           "name": "Voyager 3: wersja reżyserska",
           "players": 8,
           "tags": [
-            "scifi"
+            "scifi",
+            "trudne_wybory"
           ],
           "triggers": [
             "Śmierć"
@@ -701,7 +706,8 @@
           "name": "Nienawistna Ósemka",
           "players": 8,
           "tags": [
-            "tajemnica"
+            "tajemnica",
+            "fantasy"
           ],
           "triggers": [
             "Przemoc",
@@ -716,7 +722,8 @@
           "players": 12,
           "tags": [
             "trudne_wybory",
-            "katastrofa"
+            "katastrofa",
+            "wojna_okupacja"
           ],
           "triggers": [
             "Śmierć",

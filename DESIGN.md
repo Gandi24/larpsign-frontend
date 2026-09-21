@@ -485,7 +485,35 @@ session doesn't have to rediscover them by reading code:
   conditional, personalized, `dislikesHTML()`-style) or about the larp
   itself (→ unconditional badge, no new question needed) — this one started
   as the former by default-assuming symmetry with triggers/dislikes, when it
-  was actually the latter.
+  was actually the latter. A follow-up request reused the exact same
+  unconditional-badge shape for something unrelated: "La Candela" actually
+  starts at 17:00, an hour before its slot's own displayed "18:00–22:00"
+  window — rather than editing the slot's window (which would misrepresent
+  the other 3 larps sharing it), it got its own optional `larps.json` `time`
+  field and a `🕐 <time>` badge (`timeBadgeHTML()`) next to its name,
+  identical wiring to the language badge. Two badges can now stack on one
+  larp name.
+- **A round of specific per-larp corrections landed alongside the badge
+  work, from the organiser reviewing the tag/trigger gap-analysis this
+  session ran against the full description doc.** Applied: "Nie ufaj tengu
+  w onsenie yokai" gained "Śmierć"/"Morderstwo / zabójstwo" (a murder
+  mystery that had neither); "Nienawistna Ósemka" gained "Fantasy" (it's set
+  in the Wiedźmin universe); "Voyager 3" gained "Trudne wybory / dylematy
+  moralne"; "River Tale..." gained "Wojna / okupacja" (confirmed against the
+  organiser's own framing — "to raczej okupacja... rewolucja? powstanie?" —
+  war/occupation is the closest existing tag, there's no separate
+  uprising/revolution tag and one wasn't created for a single larp).
+  Rejected: "Kult Bachusa i Astarte" does **not** get "Oniryzm" — the
+  gap-analysis suggested it from "zacieranie granicy między snem a jawą" in
+  the description, but the organiser judged it doesn't actually fit; this is
+  the second time this exact larp's classification got walked back on
+  organiser review (see the duchowosc/folklor correction above) — a pattern
+  worth noticing if a third correction shows up, since it might mean this
+  larp's actual vibe resists the current tag set more than most. The
+  "medium confidence" half of the original gap-analysis list (Nienawistna
+  Ósemka's murder trigger, Heptameron's Komedia, Shadows' Okultyzm, River
+  Tale's Polityka) was forwarded to the game creators directly rather than
+  applied — not this codebase's call to make.
 - **Character-preference and consent-marketing state is a folksonomy risk in
   miniature, but small enough not to need the tag treatment above.**
   `characterPreferences` stayed a flat 3-item list; no unification was needed

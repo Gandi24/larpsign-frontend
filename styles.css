@@ -139,6 +139,7 @@ input.inline-text {
 .lc-head { display: flex; justify-content: space-between; align-items: baseline; gap: .6rem; }
 .lc-name { font-weight: 600; color: var(--navy); }
 .lc-lang { margin-left: .4rem; font-weight: 600; font-size: .78rem; color: var(--amber); white-space: nowrap; }
+.lc-time { margin-left: .4rem; font-weight: 600; font-size: .78rem; color: var(--accent); white-space: nowrap; }
 .lc-pct { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 .bar { height: 6px; background: #ececef; border-radius: 999px; margin: .45rem 0 .1rem; overflow: hidden; }
 .bar i { display: block; height: 100%; transition: width .15s ease, background-color .15s ease; }

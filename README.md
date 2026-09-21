@@ -124,11 +124,13 @@ Everything content-related lives here; no code changes needed.
   form has no payment processing.
 - `timeslots` — `[{ id, name, time, larps: [...] }]`. Each larp has
   `name`, `players`, `tags` (ids from `preferenceTags`), `triggers`
-  (plain strings, matching one from some group in `triggerGroups`), and an
+  (plain strings, matching one from some group in `triggerGroups`), an
   optional `language` (a free-form string — omit entirely for a
-  Polish-language larp, don't set it to a "Polski" value). When set, it
-  shows as a `🌐 <language>` badge next to the larp's name everywhere it
-  appears — purely informational, not collected from the player.
+  Polish-language larp, don't set it to a "Polski" value), and an optional
+  `time` (same format as the slot's own `time`, for the rare larp whose
+  actual hours differ from the rest of the slot). Both, when set, show as a
+  badge (`🌐`/`🕐`) next to the larp's name everywhere it appears — purely
+  informational, not collected from the player.
 
 **How dopasowanie % is computed:** the average of the player's ratings for that
 larp's `tags`, rescaled from [−2, +2] to [0, 100]. No ratings yet → 50% (neutral).
