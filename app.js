@@ -7,8 +7,8 @@
 const cfg = window.CONFIG || {};
 const $ = (sel) => document.querySelector(sel);
 
-let data = null; // larps.json
-const selections = {}; // { slotId: [{ name, ticketTier }, ...] w kolejności priorytetu }
+let data = null;
+const selections = {};
 
 // --- walidacja pól wymaganych: błąd pojawia się dopiero po kontakcie z polem
 // (blur/change), nie od razu przy wczytaniu strony — patrz DESIGN.md §6.
@@ -32,13 +32,22 @@ function fieldMessage(id) {
   return "";
 }
 
+function applyValidity(container, errorEl, ok, message, { ariaInvalid = false } = {}) {
+  if (container) {
+    container.classList.toggle("bad", !ok);
+    if (ariaInvalid) {
+      if (ok) container.removeAttribute("aria-invalid");
+      else container.setAttribute("aria-invalid", "true");
+    }
+  }
+  if (errorEl) errorEl.textContent = ok ? "" : message;
+  return ok;
+}
+
 function setFieldError(id, msg) {
   const input = document.getElementById(id);
   const errorEl = document.getElementById(`${id}-error`);
-  input.classList.toggle("bad", !!msg);
-  if (msg) input.setAttribute("aria-invalid", "true");
-  else input.removeAttribute("aria-invalid");
-  if (errorEl) errorEl.textContent = msg;
+  applyValidity(input, errorEl, !msg, msg, { ariaInvalid: true });
 }
 
 function validateField(id) {
@@ -51,11 +60,7 @@ function validateCharPrefs() {
   const ok = getCharacterPreferences().length > 0;
   const group = $("#char-prefs");
   const errorEl = $("#char-prefs-error");
-  group.classList.toggle("bad", !ok);
-  if (ok) group.removeAttribute("aria-invalid");
-  else group.setAttribute("aria-invalid", "true");
-  if (errorEl) errorEl.textContent = ok ? "" : "Zaznacz przynajmniej jedną opcję.";
-  return ok;
+  return applyValidity(group, errorEl, ok, "Zaznacz przynajmniej jedną opcję.", { ariaInvalid: true });
 }
 
 // Trzy niezależne wymagane checkboxy (RODO, strefazajec.pl, regulamin) —
@@ -68,10 +73,8 @@ function validateRequiredCheckbox(id) {
   const el = document.getElementById(id);
   const ok = el.checked;
   const line = el.closest(".checkline");
-  if (line) line.classList.toggle("bad", !ok);
   const errorEl = document.getElementById(`${id}-error`);
-  if (errorEl) errorEl.textContent = ok ? "" : "To pole jest wymagane.";
-  return ok;
+  return applyValidity(line, errorEl, ok, "To pole jest wymagane.");
 }
 
 // "Wyrażam zgodę / Inne" — wzorzec współdzielony przez zgodę foto/wideo i
@@ -90,10 +93,8 @@ function getYesOtherAnswer(name) {
 function validateYesOtherAnswer(name) {
   const ok = getYesOtherAnswer(name).choice !== null;
   const group = $(`#${name}-group`);
-  group.classList.toggle("bad", !ok);
   const errorEl = $(`#${name}-error`);
-  if (errorEl) errorEl.textContent = ok ? "" : "Wybierz odpowiedź (Wyrażam zgodę albo Inne).";
-  return ok;
+  return applyValidity(group, errorEl, ok, "Wybierz odpowiedź (Wyrażam zgodę albo Inne).");
 }
 
 function wireYesOtherField(name) {
@@ -295,6 +296,14 @@ async function init() {
     ? `© ${new Date().getFullYear()} Festiwal Krak-ON. Pytania i prośby o usunięcie danych: ${cfg.controller.email}`
     : "";
 
+  if (cfg.submissionsOpen === false) {
+    const notice = $("#submissions-closed-notice");
+    notice.textContent =
+      `Zapisy otworzą się ${cfg.submissionsOpenAt || "wkrótce"}. Formularz możesz ` +
+      `wypełnić już teraz, ale wysyłka będzie możliwa dopiero po otwarciu zapisów.`;
+    notice.hidden = false;
+  }
+
   try {
     data = await fetch("larps.json", { cache: "no-store" }).then((r) => r.json());
   } catch (e) {
@@ -345,7 +354,6 @@ async function init() {
   const form = $("#signon-form");
   form.addEventListener("submit", onSubmit);
   form.addEventListener("change", (e) => {
-    // zmiana preferencji/triggerów przelicza sloty
     if (e.target.matches('[name^="pref_"], [name="trigger"]')) {
       renderSlots();
       if (submitAttempted) revalidateTickets();
@@ -383,18 +391,18 @@ function renderPrefs() {
     .join("");
 }
 
+function checklineHTML(name, value) {
+  return `<label class="checkline"><input type="checkbox" name="${esc(name)}" value="${esc(value)}"/>
+      <span>${esc(value)}</span></label>`;
+}
+
 function renderTriggers() {
   $("#triggers").innerHTML = (data.triggerGroups || [])
     .map(
       (g) => `<details class="trigger-group">
         <summary><span class="trig-label">${esc(g.label)}</span><span class="trig-count"></span></summary>
         <div class="trigger-grid">
-          ${g.triggers
-            .map(
-              (t) => `<label class="checkline"><input type="checkbox" name="trigger" value="${esc(t)}"/>
-                <span>${esc(t)}</span></label>`
-            )
-            .join("")}
+          ${g.triggers.map((t) => checklineHTML("trigger", t)).join("")}
         </div>
       </details>`
     )
@@ -422,15 +430,16 @@ function updateTriggerGroupCounts() {
 
 function renderCharacterPrefs() {
   $("#char-prefs").innerHTML = (data.characterPreferences || [])
-    .map(
-      (c) => `<label class="checkline"><input type="checkbox" name="charpref" value="${esc(c)}"/>
-        <span>${esc(c)}</span></label>`
-    )
+    .map((c) => checklineHTML("charpref", c))
     .join("");
 }
 
+function getCheckedValues(name) {
+  return [...document.querySelectorAll(`[name="${name}"]:checked`)].map((n) => n.value);
+}
+
 function getCharacterPreferences() {
-  return [...document.querySelectorAll('[name="charpref"]:checked')].map((n) => n.value);
+  return getCheckedValues("charpref");
 }
 
 
@@ -472,10 +481,9 @@ function getRatings() {
 }
 
 function getTriggers() {
-  return [...document.querySelectorAll('[name="trigger"]:checked')].map((n) => n.value);
+  return getCheckedValues("trigger");
 }
 
-// 0..100 — średnia ocen tagów larpa, przeskalowana z [-2,2] na [0,100].
 function likeliness(larp, ratings) {
   const tags = larp.tags || [];
   if (!tags.length) return 50;
@@ -535,19 +543,23 @@ function dislikesHTML(larp, ratings) {
   return `<div class="lc-warn">👎 Możesz nie polubić: ${labels.map(esc).join(", ")}</div>`;
 }
 
+function metaBadgeHTML(cls, icon, value) {
+  return value ? `<span class="${cls}">${icon} ${esc(value)}</span>` : "";
+}
+
 // larp.language jest ustawione tylko dla larpów NIE po polsku — brak pola
 // znaczy polski, nic do pokazania. Zawsze widoczna etykieta przy nazwie,
 // niezależna od tego, czy gracz zna ten język — to informacja o larpie,
 // nie osobista ocena.
 function languageBadgeHTML(larp) {
-  return larp.language ? `<span class="lc-lang">🌐 ${esc(larp.language)}</span>` : "";
+  return metaBadgeHTML("lc-lang", "🌐", larp.language);
 }
 
 // larp.time jest ustawione tylko gdy dany larp ma inne godziny niż reszta
 // slotu (np. zaczyna się wcześniej) — slot.time w nagłówku karty slotu
 // pozostaje ogólnym oknem, to nadpisuje je widocznie dla tego jednego larpa.
 function timeBadgeHTML(larp) {
-  return larp.time ? `<span class="lc-time">🕐 ${esc(larp.time)}</span>` : "";
+  return metaBadgeHTML("lc-time", "🕐", larp.time);
 }
 
 function ticketSelectHTML(slot, name, ticketTier, i) {
@@ -573,7 +585,6 @@ function renderSlots() {
       const picks = selections[slot.id];
       const full = picks.length >= MAX_PICKS;
 
-      // Strefa „Twoje wybory” — w kolejności priorytetu.
       const tray = picks.length
         ? picks
             .map((pick, i) => {
@@ -603,7 +614,6 @@ function renderSlots() {
             .join("")
         : `<li class="tray-empty">Nic jeszcze nie wybrano — dodaj larpy z listy poniżej.</li>`;
 
-      // Strefa „Pozostałe” — niewybrane, wg dopasowania.
       const available = slot.larps
         .filter((l) => !picks.some((p) => p.name === l.name))
         .map((l) => ({ larp: l, pct: likeliness(l, ratings) }))
@@ -666,7 +676,6 @@ function onSlotAction(e) {
   scheduleSave(); // klik przycisku nie wywołuje input/change na formularzu
 }
 
-// Zmiana biletu nie wymaga przerysowania sloty — <select> już pokazuje wybór.
 function onTicketChange(e) {
   const sel = e.target.closest('select[data-action="ticket"]');
   if (!sel) return;
@@ -780,6 +789,10 @@ function validate() {
 
 async function onSubmit(e) {
   e.preventDefault();
+  if (cfg.submissionsOpen === false) {
+    setStatus(`Zapisy jeszcze nie są otwarte — wróć ${cfg.submissionsOpenAt || "wkrótce"}.`, "err");
+    return;
+  }
   const bad = validate();
   if (bad) {
     bad.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -826,9 +839,11 @@ async function onSubmit(e) {
       <a href="mailto:${esc((cfg.controller || {}).email || "")}">${esc((cfg.controller || {}).email || "")}</a>.</p></section>`;
   } catch (err) {
     btn.disabled = false;
+    const email = (cfg.controller || {}).email || "";
     setStatus(
       "Wysyłka nie powiodła się: " + err.message +
-        ". Możesz użyć „Pobierz moje odpowiedzi” i przesłać plik.",
+        `. Kliknij „Pobierz moje odpowiedzi” i wyślij pobrany plik na ${email}` +
+        " — inaczej zgłoszenie się nie zapisze.",
       "err"
     );
   }

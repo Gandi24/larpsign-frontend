@@ -138,7 +138,7 @@ Larps in a slot are sorted by this, so the best matches float to the top.
 
 > `preferenceTags`/`triggerGroups` hold Krak-ON's real 2026 programme data,
 > unified from the organiser's own per-larp tags/triggers (not guessed from
-> titles). See `.scratch/2026-krakon-tag-trigger-unification/` if you're
+> titles). See `.scratch/tag-trigger-unification/` if you're
 > doing this unification pass again for a different event's programme.
 
 ## What a submission contains
@@ -176,10 +176,10 @@ flag for the casting crew.
   confirmations (`consent.rodoNoticeRead`, `consent.strefazajecInformed`,
   `consent.rulesRead`) plus a shared timestamp. The form reproduces Centrum
   Kultury Podgórza's own official RODO notice and strefazajec.pl disclosure
-  verbatim rather than a custom summary — see `SPEC.md` §8.
+  verbatim rather than a custom summary — see `DESIGN.md`'s "GDPR / consent" section.
 - **Retention:** the reproduced official RODO notice states concrete periods
   (5 years for accounting/tax records, 3 months for camera-monitoring
-  footage, until withdrawal for consent-based processing — see `SPEC.md` §8).
+  footage, until withdrawal for consent-based processing — see `DESIGN.md`'s "GDPR / consent" section).
   Deleting the file from the private repo removes the data; there's no
   automated expiry job enforcing those periods.
 - **Erasure requests** come to `controller.email` (shown in the footer) as

@@ -1,12 +1,15 @@
 # Design Document — LARP Sign-On Form
 
-Status: living document, updated 2026-09-08: Apps Script backend migration,
-split into two repos, then a shared-secret hardening pass. **See §10 for
-exactly what is and isn't deployed right now** — code-complete and tested,
-not yet live for a real event.
-Scope: architecture, component responsibilities, and the reasoning behind
-choices — the *why* behind `SPEC.md`'s *what*. Update both together when
-behavior changes.
+A Polish-language sign-up form for a LARP (live-action role-play) festival.
+A player who has never read the programme rates what themes they enjoy,
+flags their personal triggers, and the form ranks every larp in every
+timeslot by computed fit — so they can pick their top choices per slot
+without prior knowledge of the games.
+
+This document covers both the system's architecture and reasoning (the
+*why*) and its concrete contracts — data model, algorithm, validation
+rules, payload shape (the *what*). See the Deployment status section for
+what's actually live right now.
 
 **This is one of two repos.** This one (`larpsign-frontend`) is the static
 site. The submission backend lives in a separate repo,
@@ -43,7 +46,8 @@ Three deploy targets (two repos, three destinations), two trust boundaries:
 This is a two-tier system deliberately kept as thin as possible: the "database"
 *is* a private git repo, and "browsing submissions" means browsing that repo
 (or `git log` / GitHub's file UI). There is currently no reviewer/admin tool
-beyond that (see §7's extension point for where that will hook in).
+beyond that — see the Known gaps section for that gap and the Extension
+points table for where it will hook in.
 
 ## 2. Why a relay in between (not a direct browser→GitHub write)
 
@@ -78,16 +82,72 @@ Two Apps Script constraints shape this contract, not preference:
   text/plain;charset=utf-8` instead of `application/json`, which avoids the
   browser's CORS preflight (`OPTIONS`) that Apps Script can't answer
   correctly. The body is still the JSON payload as a string; the server
-  parses it itself.
+  parses it itself. This also means there is no `ALLOWED_ORIGIN`-style
+  origin lockdown available on this backend — see the Known gaps section.
 - **No custom HTTP status codes** → every response is HTTP 200, so
   success/failure is carried in the body as `{ ok: true, path }` or
   `{ ok: false, error }`. `interpretSubmitOutcome()` (`submit-outcome.js`) is
   the client-side function that reads this field; `buildSubmissionRequest()`
   (`Code.gs`, in the `larpsign-backend` repo) is the server-side function that
-  produces it. Both
-  are pure — no `fetch`/DOM on the client side, no Apps Script globals on the
-  server side — which is what makes them unit-testable (§7, "automated
-  tests").
+  produces it. Both are pure — no `fetch`/DOM on the client side, no Apps
+  Script globals on the server side — which is what makes them unit-testable
+  (see the Non-functional requirements section).
+
+**Request envelope.** The client `POST`s `{ secret, submission }` as a
+JSON-stringified string body, where `submission` is the payload described in
+the Submission payload shape section and `secret` is `config.js`'s
+`submitSecret`. Handled server-side by `doPost(e)` (`Code.gs`), `POST` only.
+
+**Two delivery paths**, chosen by whether `config.js → submitEndpoint` is
+set:
+- **Set**: the envelope above is `POST`ed to the endpoint (the Apps Script
+  Web App) — see the checks and responses below.
+- **Empty** (local/dev): "Wyślij zgłoszenie" immediately downloads the
+  payload as a `.json` file instead of posting anywhere — the documented
+  no-backend testing mode (see `README.md`'s testing instructions).
+
+"Pobierz moje odpowiedzi" (download) is always available regardless of
+`submitEndpoint`, independent of submit — lets a player keep/backup their
+answers or hand-deliver the file if the network path fails.
+
+**Server-side checks, in order:**
+1. Body must parse as JSON → else `{ ok: false, error: "invalid_json" }`.
+2. `secret` must match the `SUBMIT_SECRET` Script Property exactly → else
+   `{ ok: false, error: "unauthorized" }`. Fails **closed**: an unconfigured
+   `SUBMIT_SECRET` rejects every request rather than admitting them. This
+   check runs before `submission` is inspected at all, and `secret` is
+   discarded afterward — it never appears in what gets committed to GitHub.
+3. `submission.consent.rodoNoticeRead === true &&
+   submission.consent.strefazajecInformed === true &&
+   submission.consent.rulesRead === true` → else
+   `{ ok: false, error: "consent_required" }`. This is the **only**
+   server-side content validation of `submission`; name/preferences/choices
+   are not re-checked.
+
+This request validation and payload-shaping lives entirely in the pure
+function `buildSubmissionRequest(rawBody, deps)` — given the raw body plus
+injected time/randomness/base64-encoding/expected-secret, it returns either a
+rejection or the exact GitHub Contents API request to send (built from
+`submission` only). No Apps Script globals, so it's covered by
+`larpsign-backend`'s own `tests/build-submission-request.test.js` without a
+live deployment.
+
+**On success**: commits the payload as
+`submissions/<ISO-timestamp-with-dashes>-<6-char-random>.json` to the
+configured **private** GitHub repo via the Contents API, using a server-held
+fine-grained PAT (`GH_TOKEN`, an Apps Script Script Property — never in
+code). Content is base64-encoded with an explicit UTF-8 charset
+(`Utilities.base64Encode(str, Utilities.Charset.UTF_8)`), since submissions
+routinely contain Polish diacritics. Returns `{ ok: true, path }`.
+
+**On GitHub API failure**: `{ ok: false, error: "github_write_failed", detail }`
+(detail is GitHub's raw response body, not sanitized before returning to the
+client), still as HTTP 200.
+
+**Client-side handling of the response**: on `ok: false`, an unparseable
+response, or a network failure, the submit button is re-enabled and an error
+is shown with a suggestion to use "Pobierz moje odpowiedzi" instead. On
+`ok: true`, the form is replaced with a thank-you message.
 
 ## 4. Why "commit JSON files to a private repo" instead of a real database
 
@@ -105,7 +165,127 @@ safety beyond GitHub's own API semantics, and reading submissions means
 opening files by hand (fine at festival scale — dozens to low hundreds of
 entries — not fine at meetup-registration-app scale).
 
-## 5. Why the matching algorithm runs client-side
+## 5. Data model — `larps.json`
+
+```jsonc
+{
+  "preferenceTags": [{ "id": "scifi", "label": "Science fiction" }, ...],   // 32 tags
+  "triggerGroups": [
+    { "id": "przemoc", "label": "Przemoc", "triggers": ["Przemoc", "Gore", ...] }
+    // 11 groups, 77 triggers total
+  ],
+  "characterPreferences": ["Kobiece", "Męskie", "Niebinarne"],
+  "ticketTiers": [
+    { "id": "wsparcia", "label": "Bilet Wsparcia", "price": "140 zł" }
+  ],
+  "timeslots": [
+    {
+      "id": "pt_wieczor", "name": "Piątek wieczór", "time": "18:00–22:00 (4h)",
+      "larps": [
+        { "name": "La Candela", "players": 32,
+          "tags": ["taniec_ruch", "cialo", "emocje"],
+          "triggers": ["Śmierć", "Żałoba", "Ciemność"] },
+        { "name": "Gra ludowa", "players": 14, "language": "Białoruski",
+          "tags": ["historia", "komedia"], "triggers": [...] }
+      ]
+    }
+  ]
+}
+```
+
+- `preferenceTags[].id` is the join key used by `larps[].tags`.
+- `triggerGroups[].triggers` is a flat string catalogue *within* each group,
+  purely for the collapsible-category UI (see the Form flow section);
+  `larps[].triggers` is a flat array of trigger strings (no group
+  indirection) that must match one of those strings verbatim —
+  matching/highlighting logic (`getTriggers()`, `triggersHTML()`) works
+  exactly as it did with the old flat `triggers` list, unaware groups exist.
+  Only the *catalogue's* rendering is grouped.
+- `larps[].players` (headcount / capacity) is captured but **not currently
+  used** by any matching, sorting, or limit logic — see the Known gaps
+  section.
+- `characterPreferences` is a flat string catalogue (like the old
+  `triggers`), rendered as a checkbox group; the player's ticks are
+  collected but not joined against any per-larp data — it's informational
+  for casting, not part of matching.
+- `larps[].language` (singular, optional string) marks a larp as **not**
+  Polish — its absence means Polish, not "unknown". Purely display: it
+  drives the `🌐 <language>` badge next to the larp's name (see Matching &
+  display algorithm), nothing else reads it and it isn't collected from the
+  player.
+- `larps[].time` (optional string, same format as `timeslots[].time`) —
+  purely display, for the rare larp whose actual hours differ from its
+  slot's own window (e.g. starts an hour early). Drives the `🕐 <time>`
+  badge next to the larp's name (see Matching & display algorithm);
+  absence means "same as the slot."
+- `ticketTiers[]` is `{ id, label, price }`; `id` is the join key used by
+  each slot pick's `ticketTier` in the submission (see Submission payload
+  shape). Price is a display string, not a machine-parsed amount — this
+  system has no payment processing; ticket choice is informational for the
+  organiser same as everything else.
+- Currently 4 timeslots holding Krak-ON's real 2026 programme (26 larps) —
+  `preferenceTags` (32 entries) and `triggerGroups` (11 groups, 77 triggers)
+  were unified together with the organiser from that event's actual
+  per-larp tag/trigger data (`_note` in `larps.json` records the source and
+  date), not guessed from titles. `players` is each larp's max headcount
+  from the organiser's sheet.
+
+## 6. Form flow
+
+1. **Kto się zapisuje** — first name, last name, preferred form of address,
+   email, and phone number (all required); birthdate (required, for 18+
+   verification); which character genders the player is willing to play,
+   ticked from `larps.json → characterPreferences` (at least one required);
+   an optional "chcę zgłosić się jako NPC" checkbox.
+2. **Preferencje** — rate every `preferenceTags` entry on a 5-point scale,
+   −2..+2: `Nie znoszę / Raczej nie / Obojętne / Lubię / Uwielbiam`. Defaults
+   to 0 (neutral).
+3. **Triggery** — tick any number of triggers from `larps.json →
+   triggerGroups`, presented as 11 collapsible categories (e.g. "Przemoc",
+   "Zdrowie psychiczne i trauma") rather than one flat list — 77 triggers is
+   too many to scan un-grouped. A collapsed category shows up to 3 of its
+   checked trigger names plus a "+N" overflow count, so a player never has
+   to reopen a category to remember what they ticked there.
+4. **Sloty** — for each of the 4 timeslots (fixed in `larps.json`), larps are
+   listed under "Pozostałe" sorted by descending match %. The player adds up
+   to **4 per slot** into a "Twoje wybory" tray, where order is priority
+   (drag via ▲/▼, remove via ✕), and picks a **ticket tier** (required) from
+   `larps.json → ticketTiers` for each picked larp. Adding/removing re-sorts
+   the remaining list live.
+5. **Złoty Bilet** — optional, explicitly a temporary feature ("opcja
+   tymczasowa na ten sezon" in its own blurb). Three fixed-priority
+   `<select>`s (1st/2nd/3rd choice), each listing every larp across all 4
+   slots flattened together — independent of the player's own slot picks in
+   step 4. Not a drag-reorder tray: three fixed dropdowns is enough
+   structure for a single-use, likely-short-lived mechanic. No
+   duplicate-prevention across the three selects — picking the same larp
+   twice is harmless, the organiser just reads it as one choice.
+6. **Afterparty** — two independent, optional checkboxes ("Chcę wziąć udział
+   w afterparty w piątek"/"w sobotę"), independent of slot picks. This is the
+   one place the form deliberately diverges from the official Krak-ON form's
+   own tri-state Tak/Nie/Może control, in favor of a simpler plain-checkbox
+   shape — a deliberate, standing choice, not a bug to "fix" back to match
+   the official form.
+7. **Prywatność i zgoda** — five questions, each following one repeated
+   visual shape: a **bold** statement of what's being asked, then an
+   *optional* supplementary section (an expandable `<details>` for the long
+   official text, a plain paragraph, or nothing), then the *unbolded*
+   selectable option(s) that answer it. Three required checkboxes carry
+   Centrum Kultury Podgórza's own text copied verbatim, not a paraphrase —
+   see the GDPR / consent section for the full detail. Then, same shape: a
+   photo/video question and a marketing-email question, both required to
+   *answer* but not to agree — "Wyrażam zgodę" or "Inne" with free text, via
+   the shared `getYesOtherAnswer`/`validateYesOtherAnswer`/`wireYesOtherField`
+   helpers (see State management & validation) — wording matches the
+   official form's "Wyrażam zgodę"/"Inne" options exactly, not a generic
+   "Tak".
+8. Submit — see the Submission payload shape section.
+
+Changing any preference rating or trigger checkbox live-recomputes match %
+and re-sorts every slot (a `change` listener on the form; see Matching &
+display algorithm).
+
+## 7. Matching & display algorithm
 
 `likeliness()` and `dislikesFor()` run entirely in `app.js`, recomputed on
 every `change` event, *before* any submission happens. Reasons:
@@ -115,8 +295,9 @@ every `change` event, *before* any submission happens. Reasons:
 - Nothing about the algorithm is secret — it's a simple average-then-rescale
   over public data (`larps.json`), so there is no reason to hide it
   server-side.
-- It keeps the relay dumb (§2) — the backend never needs to know about tags,
-  triggers, or matching logic, only "is this a valid consented submission?"
+- It keeps the relay dumb (see Why a relay in between) — the backend never
+  needs to know about tags, triggers, or matching logic, only "is this a
+  valid consented submission?"
 
 The computed `likeliness`/`dislikes`/`triggerConflicts` *are* re-embedded into
 the submission payload at submit time (`collect()`), so the organiser sees a
@@ -131,16 +312,55 @@ icons. Unselected buttons also get a faint diverging red/green background tint
 (`segTint(v)`, using the page's existing `--danger`/`--ok` colors at low
 alpha) so the row reads left-to-right as dislike→like before a player reads
 any label. This is a deliberately *bipolar* red-green use, unlike the match-%
-bars' single-hue ramp (§ bar color decision) — it's safe here because each of
-the 5 positions is also distinguished by shape (a different mouth curve) and
-fixed left-to-right order, not by color alone, so it doesn't have the
-color-only-encoding problem a continuous red-green gradient would. The tint is
-applied via a `--tint` custom property set inline per button, consumed by
+bars' single-hue ramp — it's safe here because each of the 5 positions is also
+distinguished by shape (a different mouth curve) and fixed left-to-right
+order, not by color alone, so it doesn't have the color-only-encoding problem
+a continuous red-green gradient would. The tint is applied via a `--tint`
+custom property set inline per button, consumed by
 `.seg span { background: var(--tint, #fff); }`, specifically so it can't
 out-specificity `.seg input:checked + span { background: var(--accent); }` —
 setting `background` directly inline would have.
 
-## 6. State management in `app.js`
+**Match % (`likeliness`)**: for a larp with tag set `T`, average the player's
+ratings for `T` (0 if unrated tag, though the UI defaults every rating to 0
+anyway), then rescale that average from `[-2, +2]` to `[0, 100]`:
+
+```
+pct = round( ((avg_rating + 2) / 4) * 100 )
+```
+
+A larp with no tags scores a flat 50 (neutral). Label bands:
+`≥80 Świetnie pasuje · ≥60 Pasuje · ≥40 Może być · <40 Raczej nie dla Ciebie`.
+
+**Dislike warning**: any tag on the larp that the player rated **exactly −2**
+("Nie znoszę") is surfaced as a "👎 Możesz nie polubić: …" note, separate from
+match %. Deliberately narrowed to −2 only (not −1) per commit `8c06ee6` — a
+mild dislike (−1) already drags the average down and isn't worth a standalone
+warning.
+
+**Trigger conflicts**: any trigger on the larp that the player has ticked is
+shown inline on every card, bolded, red, prefixed `⚠`, both in "Twoje wybory"
+and "Pozostałe". This is a safety flag, computed independently of match %.
+
+**Language badge**: a larp whose `language` field is set (i.e. not Polish)
+shows a `🌐 <language>` badge right next to its name, in both "Twoje wybory"
+and "Pozostałe" (`languageBadgeHTML()` in `app.js`). This is unconditional,
+not gated behind any player input — it's information about the larp itself,
+not a personalized warning, so there's no "which languages do you know"
+question backing it. Absence of the field means Polish, not "unknown."
+
+**Time badge**: a larp whose `time` field is set shows a `🕐 <time>` badge
+right next to its name, same two places (`timeBadgeHTML()` in `app.js`). For
+a larp whose actual hours differ from its slot's own displayed window (e.g.
+it starts earlier), the slot header's time stays the general window; this
+badge overrides it visibly per-larp rather than silently under-informing the
+player.
+
+**Sort order**: within a slot, un-picked larps ("Pozostałe") are sorted purely
+by descending match %. Picked larps ("Twoje wybory") keep the player's manual
+priority order, not match %.
+
+## 8. State management & validation
 
 - `data` — the fetched `larps.json`, loaded once at `init()`, treated as
   read-only for the session.
@@ -170,14 +390,14 @@ setting `background` directly inline would have.
 - `touched` (a `Set` of field ids) and `submitAttempted` (a bool) — the state
   behind "don't shame an empty required field before the player has reached
   it." The form has `novalidate`, so the browser's own validation bubbles
-  never appear; `fieldMessage()`/`setFieldError()` render the same information
-  as an inline `<p class="field-error">` instead, deliberately, because a
-  native bubble can't be middle-ground-styled to match the rest of the page
-  and disappears on its own timing, not the page's. A field only starts
-  showing a live error after its first `blur` (text/date/tel) or `change`
-  (checkbox groups, ticket `<select>`s) — checked against `touched`, not
-  against whether the field is currently empty — so tabbing through the form
-  without typing anything doesn't light up in red immediately behind the
+  never appear; `fieldMessage()`/`setFieldError()` render the same
+  information as an inline `<p class="field-error">` instead, deliberately,
+  because a native bubble can't be middle-ground-styled to match the rest of
+  the page and disappears on its own timing, not the page's. A field only
+  starts showing a live error after its first `blur` (text/date/tel) or
+  `change` (checkbox groups, ticket `<select>`s) — checked against `touched`,
+  not against whether the field is currently empty — so tabbing through the
+  form without typing anything doesn't light up in red immediately behind the
   cursor. `validate()` (run on submit) treats every field as touched at once,
   which is also what flips `submitAttempted`, so any later slot-list
   re-render (add/remove/reorder) knows to keep re-showing ticket errors via
@@ -186,179 +406,278 @@ setting `background` directly inline would have.
 - `submit-outcome.js` deliberately sits *outside* this state entirely — it's
   a pure function of a parsed response body, loaded as its own `<script>` tag
   before `app.js` so it can be `require()`d directly by Node tests without
-  pulling in `window`/`document` (see §7).
+  pulling in `window`/`document` (see the Non-functional requirements
+  section).
 - `storage` (a `localStorage` handle, or `null` if unavailable) backs the
-  draft-autosave feature (`SPEC.md` §6a). It's probed once (`draftStorage()`)
-  rather than assumed present, because `localStorage` throws synchronously in
-  private-browsing contexts in some browsers — a thrown probe just means
-  autosave silently does nothing, never a broken page. Deliberately **not**
-  a manual "Save" button: a button is exactly the thing someone forgets to
-  click right before an accidental tab close, so every `input`/`change` on
-  the form schedules a debounced (~600ms) write instead, plus an explicit
-  `scheduleSave()` call after `onSlotAction` (button clicks on the tray don't
-  fire `input`/`change` on the form the way a text field or checkbox does).
-  Consent checkboxes are excluded from the saved/restored shape on purpose —
-  a returning player re-confirms consent rather than inheriting it silently.
-  The visible feedback is a single small fixed badge (`#draft-badge`, top-right,
-  hidden until a draft exists) rather than a page-width bar: the first version
-  of this was a sticky top banner with a "Zacznij od nowa" reset button, but
-  that read as more prominent than the feature warranted for something this
-  low-stakes, and a manual reset control wasn't wanted at all — the draft
-  already clears itself on successful submit, which is the only "reset" this
-  needs.
+  draft-autosave feature ("zapisz i wróć później" — see below). It's probed
+  once (`draftStorage()`) rather than assumed present, because `localStorage`
+  throws synchronously in private-browsing contexts in some browsers — a
+  thrown probe just means autosave silently does nothing, never a broken
+  page. Deliberately **not** a manual "Save" button: a button is exactly the
+  thing someone forgets to click right before an accidental tab close, so
+  every `input`/`change` on the form schedules a debounced (~600ms) write
+  instead, plus an explicit `scheduleSave()` call after `onSlotAction`
+  (button clicks on the tray don't fire `input`/`change` on the form the way
+  a text field or checkbox does). Consent checkboxes are excluded from the
+  saved/restored shape on purpose — a returning player re-confirms consent
+  rather than inheriting it silently. The visible feedback is a single small
+  fixed badge (`#draft-badge`, top-right, hidden until a draft exists) rather
+  than a page-width bar: the first version of this was a sticky top banner
+  with a "Zacznij od nowa" reset button, but that read as more prominent than
+  the feature warranted for something this low-stakes, and a manual reset
+  control wasn't wanted at all — the draft already clears itself on
+  successful submit, which is the only "reset" this needs.
 
-## 7. Known gaps / deliberately deferred
+### Selection rules
+
+- Max **4 picks per slot** (`MAX_PICKS`), independent per slot.
+- A larp already picked in a slot cannot be re-added; disabled `+ Dodaj` once
+  the slot tray hits 4.
+- Reordering is via ▲/▼ (swap with neighbor); ✕ removes and reflows.
+- Each pick carries its own **ticket tier** (`selections[slotId][i].ticketTier`,
+  a `ticketTiers[].id`), chosen from a `<select>` in the tray item. Unset by
+  default; submit is blocked until every current pick has one.
+- No cross-slot exclusivity — a player may pick larps that would clock-conflict
+  outside this tool; the sign-on has no concept of "you can only attend one
+  slot's worth of larps across the whole festival" beyond the per-slot cap.
+
+### Validation rules
+
+**Client-side validation** (`validate()`, blocks submit until satisfied):
+- First name, last name, preferred address, email (format-checked via the
+  input's own `checkValidity()`, not just non-empty), phone, and birthdate
+  all non-empty.
+- At least one `characterPreferences` checkbox ticked.
+- All three RODO/consent checkboxes checked: the official privacy-notice
+  read-confirmation (`#consent-rodo`), the strefazajec.pl payment-processor
+  acknowledgement (`#consent-strefazajec`), and the regulamin read-confirmation
+  (`#consent-rules`).
+- The photo/video question and the marketing-email question each have a
+  selection — "Wyrażam zgodę" or "Inne" (`getYesOtherAnswer(name).choice !== null`,
+  shared by both via `validateYesOtherAnswer`/`wireYesOtherField`). The
+  *content* isn't validated: "Inne" with an empty free-text field still counts
+  as answered — only an *answer* is required, not agreement.
+- Every current slot pick has a `ticketTier` selected (checked per slot, in
+  tray-item DOM order — see the `selections` bullet above for why by
+  position, not by name).
+
+**Validation timing**: each required field/group gets its own inline message
+(a `<p class="field-error">`, `aria-describedby`-linked to its control) rather
+than relying solely on the one bottom-of-form status line. A field only shows
+its error once the player has *touched* it — first `blur` for text/date/tel
+inputs, first `change` for the checkbox groups and ticket `<select>`s — so an
+untouched, empty required field stays neutral on page load rather than
+greeting the player with a wall of red. Once touched (or once a submit has
+been attempted, which marks every field touched at once), the message updates
+live on every further `input`/`change`, disappearing the moment the field
+becomes valid. Re-rendering the slots list (add/remove/reorder a pick)
+rebuilds its DOM from scratch, which would otherwise silently drop a showing
+ticket error — `revalidateTickets()` re-applies it immediately after, but
+only once a submit has already been attempted, keeping the same "don't shame
+early" rule consistent across re-renders.
+
+No validation requires *any* slot picks, ratings, or triggers themselves — a
+player who adds zero larps to any slot can still submit, as long as the
+identity/consent fields above are satisfied (a pick, once added, does require
+its ticket tier).
+
+### Draft autosave ("zapisz i wróć później")
+
+The whole form autosaves to `localStorage` (key `larpsign:draft:v1`) on every
+`input`/`change`, debounced ~600ms, with no manual save button — a button can
+be forgotten right before an accidental tab close; autosave can't be. On page
+load, a saved draft (if any) restores identity fields, ratings, triggers,
+character preferences, the NPC checkbox, Golden Ticket priorities, slot picks
++ ticket tiers, and afterparty choices before `renderSlots()` runs.
+
+**Deliberately excluded from save/restore**: the consent checkboxes (general,
+rules-read, photo/video, marketing). A returning player re-confirms consent
+explicitly rather than inheriting a stale, un-reviewed agreement.
+
+**Visible feedback**: a small fixed badge, top-right corner (`#draft-badge`),
+hidden until a draft exists. It reads "Zachowano dane · HH:MM" after any
+autosave, or the same text using the saved timestamp on restore — one visual
+language for both "just saved" and "restored from earlier," no separate
+"restored" message. There is no manual clear/reset control; the draft clears
+itself automatically on successful submission (both the real backend path and
+the local-download fallback), so a later visit never tries to restore an
+already-submitted form.
+
+**Defensive handling**: storage access is probed once at load (`draftStorage()`)
+and every read/write is wrapped in `try`/`catch` — private browsing, storage
+quota, or a corrupted stored value all degrade to "autosave silently does
+nothing" rather than breaking the page. Restoring also drops any saved pick
+whose slot or larp no longer exists in the current `larps.json` (content may
+have changed since the draft was saved).
+
+## 9. Submission payload shape
+
+**Submission payload** (`schemaVersion: 8`):
+
+```jsonc
+{
+  "meta": { "event", "submittedAt" /* ISO */, "schemaVersion": 8 },
+  "identity": {
+    "firstName", "lastName", "preferredAddress", "email", "phone",
+    "birthdate" // "YYYY-MM-DD" from <input type=date>, no auto age-check
+  },
+  "characterPreferences": ["<characterPreferences string>", ...],
+  "wantsNpc": false,
+  "goldenTicket": { "priorities": ["<larp name>", ...] },  // 0-3 entries, empty selects dropped, order preserved
+  "afterparty": {
+    "friday": true,   // plain optional booleans — unchecked is a valid false
+    "saturday": false
+  },
+  "consent": {
+    "rodoNoticeRead": true,       // confirms the official RODO notice (verbatim — see GDPR / consent)
+    "strefazajecInformed": true,  // confirms the strefazajec.pl payment-processor disclosure (verbatim)
+    "rulesRead": true,            // confirms the event regulamin
+    "photoVideo": { "choice": "tak", "other": "" },        // choice: "tak" | "inne" | null (null only pre-validation)
+    "marketingEmail": { "choice": "inne", "other": "nie" }, // same shape as photoVideo, same validation
+    "timestamp" /* ISO */
+  },
+  "preferences": { "<tagId>": -2..2, ... },       // every tag, defaults included
+  "triggers": ["<trigger string>", ...],           // only the ticked ones
+  "choices": {
+    "<slotId>": [
+      {
+        "priority": 1,                             // 1-based, matches tray order
+        "name": "<larp name>",
+        "ticketTier": "<ticketTiers[].id>",         // null only if collected pre-validation
+        "likeliness": 83,                           // match % at submit time
+        "triggerConflicts": ["<trigger string>", ...],
+        "dislikes": ["<tag label>", ...]             // -2-rated tags on this larp
+      }
+    ]
+  }
+}
+```
+
+## 10. GDPR / consent
+
+- **Lawful basis**: explicit opt-in consent, three checkboxes required,
+  timestamped and stored with every submission — confirming the official
+  RODO notice (`rodoNoticeRead`), the strefazajec.pl payment-processor
+  disclosure (`strefazajecInformed`), and the event regulamin (`rulesRead`),
+  each its own distinct purpose. `photoVideo` (promotional photo/video use)
+  is a required *question*, not a required *consent* — the player must pick
+  "Wyrażam zgodę" or "Inne" (with optional free text for nuance, e.g. partial
+  consent), but either answer, including a declining "Inne", satisfies
+  validation. `marketingEmail` follows the identical pattern. Keeping
+  photo/video and marketing-email as their own fields (rather than folding
+  them into the general consents) matters because each is a distinct purpose
+  under GDPR from processing data for casting — consent (or its refusal) for
+  a distinct purpose must be freely given, separable, and not a condition of
+  using the service, which is also why answering the question is required
+  but *agreeing* is not.
+- **Transparency, and why the wording is copied rather than written**: the
+  privacy-notice and consent copy in this form is deliberately taken verbatim
+  from Krak-ON's own published sources rather than independently worded,
+  because running an event and being its RODO data controller are different
+  questions with different answers, and getting either the controller's
+  identity or the legal basis wrong independently would be a real compliance
+  mistake, not just a copy-editing one. Concretely: the full official
+  "Informacja dotycząca przetwarzania danych osobowych" (Centrum Kultury
+  Podgórza's own RODO notice, sections I-X — administrator, IOD, legal basis
+  and purposes, data-subject rights, retention, recipients,
+  automated-decision and third-country disclosures) is reproduced verbatim in
+  a `<details>` block, not paraphrased or summarized. The strefazajec.pl
+  payment-processor statement is likewise verbatim, with its full text
+  serving as the checkbox's own label rather than a summary of it. If
+  `config.js.rulesUrl` is set, a note above the third checkbox links to the
+  regulamin directly ("Regulamin wydarzenia dostępny jest pod adresem: ...").
+- **`config.js.controller.name`** (shown in the footer as the practical
+  erasure-request contact) reads "Stowarzyszenie Terra Futura oraz Centrum
+  Kultury Podgórza" — matched to the wording of the general-consent checkbox
+  on the real, currently live Krak-ON Google sign-on form, the most specific
+  and current source available for what this form's own consent covers. The
+  verbatim RODO notice reproduced in `index.html` separately names Centrum
+  Kultury Podgórza as administrator alone; the two may simply be scoped
+  differently (the festival's general consent vs. this specific venue's own
+  RODO administrator role) but that hasn't been independently confirmed with
+  the organiser — worth resolving with them before changing either value.
+- **Data minimization**: name, email, phone, and birthdate are all mandatory
+  — a wider set than a nickname-only design would need, adopted to match a
+  real festival's actual needs (emergency contact, 18+ verification for
+  legally-required age-gating). No further PII beyond what's described in
+  this document is collected.
+- **Storage location disclosure**: this form's own processing chain (Google
+  Apps Script relay, data transits but is not persisted there, and GitHub as
+  the actual storage, both USA-based) is not separately disclosed to the
+  player in the form's own copy — the official RODO notice (§V, "Odbiorcy
+  danych osobowych") covers processors in general terms. If this becomes a
+  compliance concern, it belongs in the organiser's own regulamin/RODO text,
+  not as separately-invented copy in this codebase.
+- **Retention**: the official RODO notice's own §VI states concrete retention
+  periods (accounting/tax documentation: 5 years after the year of the event;
+  camera-monitoring recordings: no more than 3 months; consent-based
+  processing: until withdrawal) — reproduced verbatim as part of the notice.
+  `config.js` carries no separate `retention` field; the notice is the single
+  source for this. *Enforced manually regardless*: deleting the JSON file in
+  the private repo is this project's own deletion mechanism, there is no
+  automated expiry job.
+- **Erasure**: the official notice's own §I/§II give the authoritative
+  contact channels (Centrum Kultury Podgórza, `sekretariat@ckpodgorza.pl`,
+  and its Inspektor Ochrony Danych at `iod@ckpodgorza.pl`);
+  `controller.email` in `config.js`, shown in the footer, is this project's
+  own practical contact for erasure requests specifically about a `larpsign`
+  submission — manual process either way (organiser finds and deletes the
+  file(s) for that person).
+- **Public files contain no secrets**: `config.js` and `larps.json` are
+  served publicly via GitHub Pages and must never carry tokens or
+  participant data — only `larpsign-backend`'s `Code.gs`'s `GH_TOKEN` (an
+  Apps Script Script Property) touches write credentials.
+- **No sync mechanism**: if Krak-ON's regulamin or official sign-on form
+  change their wording later, this form's copy needs to move with it by
+  hand — there's no mechanism that keeps them in sync automatically, and
+  there isn't a good one available (both are normal web pages, not an API).
+
+## 11. Known gaps / deliberately deferred
 
 These are absent by omission, not oversight — flagging them so a future
 session doesn't have to rediscover them by reading code:
 
-- **Privacy notice content is deliberately copied from Krak-ON's own
-  published sources, not independently worded — and went through two rounds
-  of correction as a closer source turned up each time.** Earlier drafts used
-  `controller.name` = the full 3-organiser list from the regulamin's §1
-  ("who runs the festival") and a made-up `retention` value ("do 60 dni po
-  festiwalu"). Both were wrong: running an event and being its RODO data
-  controller are different questions with different answers here, and the
-  regulamin states no concrete retention period at all ("przez okres
-  niezbędny do realizacji celu"). Round 2 corrected `controller.name` to the
-  single administrator named in the regulamin's own photo-scoped RODO clause
-  (Stowarzyszenie Terra Futura alone) — but that clause turned out to be
-  narrower than the *general* data-processing consent on the real, currently
-  live Krak-ON Google sign-on form, whose own text names two co-administrators
-  ("...Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza"). Round 3
-  matched that instead, since it's the most specific and most current source
-  for what this form's own consent actually covers. The `retention` config
-  field was removed entirely (a still-optional field showing nothing is
-  functionally identical to no field, and a stale-looking unused config key
-  invites someone to "helpfully" fill it back in with another guess), and the
-  "Twoje prawa" rights list was expanded to match the real form's own list
-  (access, rectification, erasure, restriction, portability, consent
-  withdrawal, UODO complaint) instead of the shorter ad-hoc version that
-  shipped first. Same round: the **photo/video and marketing-email consent
-  questions were changed from checkboxes to a required-answer-not-
-  required-agreement "Wyrażam zgodę" / "Inne" (free text) choice**, matching
-  the real form's own options exactly rather than a generic "Tak"/"Nie" —
-  implemented once as a shared pattern (`getYesOtherAnswer` /
-  `validateYesOtherAnswer` / `wireYesOtherField` in `app.js`, driven by the
-  `#{name}-group`/`#{name}-yes`/`#{name}-other`/`#{name}-other-text`/
-  `#{name}-error` id convention) and reused for both fields rather than
-  duplicated. Afterparty interest was also changed from yes/no to tri-state
-  Tak/Nie/Może to match the real form. If Krak-ON's regulamin or sign-on form
-  change their wording later, this form's copy needs to move with it — there's
-  no mechanism that keeps them in sync automatically, and there isn't a good
-  one available (both are normal web pages, not an API).
-  **Round 4** went further: the custom-written `renderPrivacy()` summary
-  (`config.js.controller`/`processorNote` templated into a few sentences) and
-  the ad-hoc "Twoje prawa" rights list were removed entirely and replaced
-  with Centrum Kultury Podgórza's actual, complete "Informacja dotycząca
-  przetwarzania danych osobowych" — the real form's own RODO notice text
-  (sections I-X), pasted verbatim into `index.html` as static markup inside a
-  `<details class="rodo-notice">`, not templated or reworded at all. A second
-  verbatim block, the strefazajec.pl payment-processor disclosure, was added
-  the same way — its full "Oświadczam, że zostałem poinformowany..." text
-  *is* the checkbox's own label, not a summary of it. A third, new checkbox
-  ("Zapoznałem się z regulaminem wydarzenia") keeps the regulamin
-  confirmation, now preceded by its own "Regulamin wydarzenia dostępny jest
-  pod adresem: ..." line instead of being folded into the checkbox label
-  itself. `renderPrivacy()` is gone from `app.js`; `config.js.processorNote`
-  was deleted (unused once `renderPrivacy()` was removed — same "don't leave
-  a stale config key lying around" reasoning as the `retention` field
-  removal above). **This surfaces an unresolved discrepancy worth flagging
-  rather than silently resolving a fourth time:** the verbatim notice names
-  its administrator as Centrum Kultury Podgórza *alone*, while
-  `config.js.controller.name` still holds Round 3's two-organiser value
-  ("Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza"), used in the
-  footer's erasure-contact line and nowhere else now that the privacy-notice
-  rendering is gone. Round 3's source (the general-consent checkbox text on
-  the live Google Form) and this round's source (the complete, from-the-org
-  RODO notice) may simply be scoped differently — the two-org phrasing could
-  cover the *festival's* general consent while the notice covers this
-  specific *venue's* own RODO administrator role — but that's a guess, not a
-  verified fact; whether `controller.name`/`controller.email` should still
-  read "Stowarzyszenie Terra Futura oraz Centrum Kultury Podgórza" or should
-  be corrected to match the notice's own contact channels
-  (`sekretariat@ckpodgorza.pl`, IOD `iod@ckpodgorza.pl`) needs the organiser's
-  own confirmation before either is guessed at again.
-  **Round 5**, immediately after: two presentation-only changes, no new
-  discrepancies. First, **every consent question's markup was unified into
-  one repeated shape** — a bold `<strong>` statement of what's being asked,
-  then an *optional* supplementary section (the RODO `<details>`, a plain
-  paragraph for strefazajec.pl/regulamin, or nothing for marketing-email),
-  then the actual selectable option(s) at normal (unbolded) weight. This
-  also fixed a real inconsistency the unification pass surfaced: the
-  marketing-email question's label had never been bolded like the
-  photo-consent one was, despite both following the same
-  `getYesOtherAnswer` pattern — now both are. Second, the photo-consent
-  blurb ("Zdajemy sobie sprawę, że niektóre larpy mają tematykę
-  kontrowersyjną — zdjęcia z takich gier zostaną przed publikacją przesłane
-  do weryfikacji uczestnikom") was replaced with a shorter, broader
-  statement that *all* photos (not just ones from "controversial" larps) get
-  sent back to the player for verification before publishing — a real
-  process commitment, not just copy trimming, so if that's not actually the
-  organiser's intended review process this needs correcting before launch.
-  **Also in Round 5, unrelated to consent:** afterparty, which Round 3 had
-  deliberately changed from plain checkboxes to tri-state Tak/Nie/Może to
-  match the official form exactly, was reverted back to plain optional
-  checkboxes ("Chcę wziąć udział w afterparty w piątek/w sobotę") on
-  explicit user preference — the simpler control was judged better here even
-  though it means this one field no longer mirrors the official form's own
-  shape (`getAfterpartyAnswer()` removed from `app.js`; `afterparty.friday`/
-  `.saturday` are plain booleans again, `schemaVersion` 8). This is a
-  deliberate, acknowledged divergence, not an oversight — don't "fix" it
-  back to tri-state without asking first.
 - **No capacity enforcement.** `larps.json → larps[].players` (headcount) is
   parsed but never used. Nothing stops more players from prioritizing a larp
   than it has seats; that reconciliation is implicitly left to the organiser
   doing manual casting from the submitted priority lists.
-- **No cross-slot conflict detection.** Nothing ties timeslots to real wall-clock
-  overlap or warns about anything beyond the 4-slot structure already defined.
+- **No cross-slot conflict detection.** Nothing ties timeslots to real
+  wall-clock overlap or warns about anything beyond the 4-slot structure
+  already defined.
 - **No dedup / resubmission handling.** The backend writes a new timestamped
   file per POST; a player submitting twice (e.g. after a network error retry)
   produces two files. No "upsert by identity" concept exists.
-- **No rate limiting.** A correctly-secreted request (see below) still isn't
+- **No rate limiting.** A correctly-secreted request still isn't
   rate-limited — repeated valid-looking POSTs all succeed. Acceptable for a
   low-traffic festival form; would need real hardening (e.g. Turnstile) for a
   more exposed deployment.
 - **No origin restriction is possible, and it wouldn't have meant what it
-  looked like anyway.** The old Worker's `ALLOWED_ORIGIN` lockdown has no
-  Apps Script equivalent — a Web App deployed with "Access: Everyone" accepts
-  requests from any origin, and Apps Script doesn't offer a way to restrict
-  that. Worth being precise about what this actually cost: CORS is a
-  browser-enforced rule about which page's JS may *read a response*, never a
-  server-side access control — `ALLOWED_ORIGIN` never stopped a direct `curl`
-  either. It's a real regression in one specific way, though: because the
-  frontend sends `text/plain` to dodge Apps Script's CORS limitation (§3),
-  the browser treats it as a "simple request" and skips the preflight
-  entirely — meaning *any* third-party website could embed hidden JS that
-  silently POSTs to this endpoint from an unsuspecting visitor's browser, no
-  read of the frontend's source required. The shared secret below exists
-  specifically to close that gap (a blind cross-site POST won't know the
-  secret), on top of the unlisted-URL mitigation both backends always relied
-  on.
+  looked like anyway.** Apps Script Web Apps deployed with "Access:
+  Everyone" accept requests from any origin, with no equivalent of an
+  `ALLOWED_ORIGIN` lockdown available. Worth being precise about what this
+  costs: CORS is a browser-enforced rule about which page's JS may *read a
+  response*, never a server-side access control — an origin allowlist never
+  stops a direct `curl` either. It's a real regression in one specific way,
+  though: because the frontend sends `text/plain` to dodge Apps Script's
+  CORS limitation (see the Request/response contract section), the browser
+  treats it as a "simple request" and skips the preflight entirely — meaning
+  *any* third-party website could embed hidden JS that silently POSTs to
+  this endpoint from an unsuspecting visitor's browser, no read of the
+  frontend's source required. The shared secret below exists specifically
+  to close that gap (a blind cross-site POST won't know the secret), on top
+  of the unlisted-URL mitigation both backends have always relied on.
 - **Shared secret (`SUBMIT_SECRET` / `config.js`'s `submitSecret`) — a
-  deterrent, not real security, and documented as such.** Every request body
-  is now an envelope `{ secret, submission }`; the backend rejects anything
-  whose `secret` doesn't match before looking at `submission` at all (fails
-  *closed* if `SUBMIT_SECRET` isn't configured, not open). Because
+  deterrent, not real security, and documented as such.** Because
   `config.js` is a public file served as-is by GitHub Pages, this secret is
   trivially readable by anyone who opens it — it does **not** stop a
-  determined actor who reads the frontend's source, only the CSRF-style blind
-  POST above and casual/automated scanning. This trade-off was a deliberate,
-  informed choice for this project's actual shape: a short-lived,
+  determined actor who reads the frontend's source, only the CSRF-style
+  blind POST above and casual/automated scanning. This was a deliberate,
+  informed trade-off for this project's actual shape: a short-lived,
   per-festival deployment where "stops opportunistic abuse without adding a
   captcha/verification service" was judged worth it over real bot protection
   (e.g. reCAPTCHA/Turnstile, verified server-side) — which remains the
   documented next step (see the rate-limiting bullet above) if a deployment
   ever needs more than this.
-- **Automated tests exist, narrowly.** `npm test` in each repo covers one pure
-  function each (`interpretSubmitOutcome` here, `buildSubmissionRequest` in
-  `larpsign-backend`'s `Code.gs`) — extracted specifically because the Apps
-  Script migration added real branching logic (consent/JSON validation,
-  error-code mapping), matching this doc's own earlier-stated trigger for
-  adding tests. Everything else (rendering, matching, slot selection, the
-  actual live deploy) remains manually verified. Both repos run `npm test` on
-  every push/PR via `.github/workflows/test.yml` — see the note below on why
-  CI stops there.
 - **GitHub Actions deliberately doesn't automate the Apps Script deploy
   itself.** Investigated and rejected: Google's `clasp` CLI can push code to
   an *existing* Apps Script deployment non-interactively once credentials
@@ -371,9 +690,9 @@ session doesn't have to rediscover them by reading code:
   script.google.com's own UI. Net result: there is no way to provision a
   stranger's brand-new Apps Script Web App without *someone* touching either
   a terminal or script.google.com's UI at least once — automating it would
-  either not work reliably or would reintroduce the terminal requirement this
-  migration specifically eliminated. CI's job is limited to keeping the pure
-  functions correct; deploy stays the manual walkthrough in each repo's
+  either not work reliably or would reintroduce the terminal requirement
+  this migration specifically eliminated. CI's job is limited to keeping the
+  pure functions correct; deploy stays the manual walkthrough in each repo's
   README.
 - **No admin/reviewing UI.** Organisers read submissions as raw JSON files in
   the private repo. Because that repo is already private and admin-only,
@@ -389,137 +708,41 @@ session doesn't have to rediscover them by reading code:
   atomically, sent as a POST body field (never a URL), over HTTPS, optionally
   time-boxed. This was deliberately not pursued now: it trades away
   per-organiser data ownership questions (does each organiser's data still
-  land in their own repo, or centralize under repos the maintainer controls?)
-  and meaningfully increases the maintainer's GDPR processor/controller
-  responsibility across every event using it. Recorded here so a future
-  session doesn't have to rediscover this reasoning from scratch.
-- **Ticket tiers are informational only, no payment processing.** `ticketTiers`
-  (added modeling a reference festival's Google Form) captures which tier a
-  player intends to buy per pick — it does not charge anyone, check inventory,
-  or enforce the reference form's own rule that Social-ticket availability is
-  capped by how many Support tickets were bought. If a real event needs that,
-  it's a manual reconciliation the organiser does from submitted data, same
-  as capacity (`players`, above) — not logic this form implements.
-- **Content is now real, not guessed — but the tag/trigger vocabulary is a
-  curated unification, not a raw import.** As of 2026-09-18, `larps.json`
-  holds Krak-ON's actual 2026 programme (26 larps) with real per-larp
-  tags/triggers from the organiser's own sheet — no longer titles/authors
-  guesses. That sheet's raw vocabulary was ~90 tags and ~93 triggers, almost
-  all used by only one larp (a folksonomy, not a rating scale). `preferenceTags`
-  (32, see below) and `triggerGroups` (11 groups, 77 triggers) are a manual unification
-  done together with the organiser — merging near-duplicates, splitting
-  compound raw values (e.g. `rasizm/dyskryminacja` → two separate triggers),
-  dropping ~20 items judged too narrow/branded to be a reusable category
-  (media references like `Wiedźmin`/`tarantino`, pure logistics/prop notes
-  like `wymagane czarne/ciemne`). The generation script and full raw→final
-  mapping are checked in at `.scratch/2026-krakon-tag-trigger-unification/`
-  as a reference for redoing this process for a future event's programme —
-  it won't just re-run against new data, see that folder's own README for
-  why and what to do instead. The source CSV itself was never committed;
-  it carried real GMs' emails/phones/Discord handles.
-- **The 2026-09-18 unification wasn't the last word — a 2026-09-20 organiser
-  feedback round reshaped part of it, this time from *player experience*
-  complaints rather than a raw-tag folksonomy problem.** "Rytuał / duchowość
-  / folklor" was one tag standing in for two things players feel oppositely
-  about — a character devoted to *local folklore/tradition* vs. one devoted
-  to *religion/the divine* — split into "Duchowość / religia" and "Folklor /
-  obrzędy". Deciding which of the 6 affected larps got which (or
-  neither) wasn't done from the tag name alone: each larp's actual
-  description was read (from the organiser's shared doc) to judge it — e.g.
-  "Nie ufaj tengu w onsenie yokai" (explicitly tagged `#folklor_japoński` by
-  its own author) is Folklor. First pass also put "Kult Bachusa i Astarte"
-  (a ritual literally invoking named gods) under Duchowość/religia — the
-  organiser walked that back on review, so it now carries neither of the two
-  split tags, just its other three. That correction is itself worth keeping
-  in mind: reading a description and picking the "obviously" fitting new tag
-  isn't the same as the organiser's own judgment of whether the tag actually
-  belongs, even when the reasoning sounds solid. "Nietypowa forma /
-  eksperyment" was dropped outright rather than replaced — the 3 larps
-  carrying it turned out to be structurally unrelated (a vignette-scene
-  theatrical piece, a Szekspir jeepform/metagra, a Japanese-folklore murder
-  mystery), so a single shared tag was misrepresenting a commonality that
-  didn't exist; each keeps its other, more specific tags instead. "Ekspresja
-  ciałem / larp bez słów" and "Oniryzm / surrealizm" were trimmed to "Larp
-  bez słów" and "Oniryzm" — confirmed against the data first, not just taste:
-  every larp with the "ciałem" tag already carried "Taniec / larp ruchowy"
-  too (so nothing was reclassified, just shortened), and "surrealizm" turned
-  out to be entirely unused across the whole programme. "Orientalne" was
-  added and applied to the one larp explicitly built around Japanese
-  folklore/anime aesthetics — added to the vocabulary but intentionally not
-  forced onto looser candidates (e.g. "Awatar: Rozdroża", Avatar-inspired
-  but not itself specifically Orientalist) without the organiser confirming
-  the read. On the trigger side: "Wykluczenie" renamed "Wykluczenie /
-  ostracyzm" (same trigger, clarified wording, both existing usages
-  updated); "Bycie ofiarą przemocy" / "Bycie sprawcą przemocy" added to
-  Przemoc for players who care which *side* of on-screen violence their
-  character is on (not the same axis as violence *type*, which the existing
-  Przemoc sub-triggers already cover) — applied to "River Tale...", the one
-  larp whose description explicitly splits characters into
-  invaders/collaborators/revolutionaries vs. innocent victims. All of this
-  needed a real source, same discipline as the RODO content in §7 above —
-  it came from the organiser's own larp-description doc
-  (`.scratch/2026-krakon-tag-trigger-unification/gen_larps.py`'s header
-  comments link the doc used), not from guessing at what a larp "probably"
-  covers from its title alone.
-- **New feature this round: a language badge, deliberately simplified
-  mid-flight.** Two larps in the programme aren't in Polish (an English one,
-  a Belarusian one whose written materials are in Russian per the
-  organiser). The first version personalized this: a "which languages do you
-  know" checklist plus a conditional `.lc-warn` note that only showed up if
-  the larp's language wasn't among the player's ticks (mirroring
-  `dislikesHTML()` exactly, including a new `languages` top-level vocabulary
-  array and per-player `languages` field in the submission, `schemaVersion`
-  9). The user rejected that on review — wanted, verbatim, "just mark
-  visibly next to larp's name that this game is played in other language
-  than polski." That's unconditional information about the *larp*, not a
-  personalized judgment about the player, so the whole "known languages"
-  side was removed: no question, no checklist, no per-player field, no
-  `schemaVersion` bump (reverted to 8 — the payload shape ended up identical
-  to before this round started). What's left is `larps.json`'s per-larp
-  optional `language` field (absence = Polish, not "unknown") and
-  `languageBadgeHTML()` in `app.js`, which renders a small `🌐 <language>`
-  badge directly next to `.lc-name` whenever it's set — always, not
-  conditionally — in both the "available" card and an already-added tray
-  item. Worth remembering for next time a "warn the player about X" feature
-  comes up: check first whether X is actually about the player (→
-  conditional, personalized, `dislikesHTML()`-style) or about the larp
-  itself (→ unconditional badge, no new question needed) — this one started
-  as the former by default-assuming symmetry with triggers/dislikes, when it
-  was actually the latter. A follow-up request reused the exact same
-  unconditional-badge shape for something unrelated: "La Candela" actually
-  starts at 17:00, an hour before its slot's own displayed "18:00–22:00"
-  window — rather than editing the slot's window (which would misrepresent
-  the other 3 larps sharing it), it got its own optional `larps.json` `time`
-  field and a `🕐 <time>` badge (`timeBadgeHTML()`) next to its name,
-  identical wiring to the language badge. Two badges can now stack on one
-  larp name.
-- **A round of specific per-larp corrections landed alongside the badge
-  work, from the organiser reviewing the tag/trigger gap-analysis this
-  session ran against the full description doc.** Applied: "Nie ufaj tengu
-  w onsenie yokai" gained "Śmierć"/"Morderstwo / zabójstwo" (a murder
-  mystery that had neither); "Nienawistna Ósemka" gained "Fantasy" (it's set
-  in the Wiedźmin universe); "Voyager 3" gained "Trudne wybory / dylematy
-  moralne"; "River Tale..." gained "Wojna / okupacja" (confirmed against the
-  organiser's own framing — "to raczej okupacja... rewolucja? powstanie?" —
-  war/occupation is the closest existing tag, there's no separate
-  uprising/revolution tag and one wasn't created for a single larp).
-  Rejected: "Kult Bachusa i Astarte" does **not** get "Oniryzm" — the
-  gap-analysis suggested it from "zacieranie granicy między snem a jawą" in
-  the description, but the organiser judged it doesn't actually fit; this is
-  the second time this exact larp's classification got walked back on
-  organiser review (see the duchowosc/folklor correction above) — a pattern
-  worth noticing if a third correction shows up, since it might mean this
-  larp's actual vibe resists the current tag set more than most. The
-  "medium confidence" half of the original gap-analysis list (Nienawistna
-  Ósemka's murder trigger, Heptameron's Komedia, Shadows' Okultyzm, River
-  Tale's Polityka) was forwarded to the game creators directly rather than
-  applied — not this codebase's call to make.
-- **Character-preference and consent-marketing state is a folksonomy risk in
-  miniature, but small enough not to need the tag treatment above.**
-  `characterPreferences` stayed a flat 3-item list; no unification was needed
-  at this scale.
+  land in their own repo, or centralize under repos the maintainer
+  controls?) and meaningfully increases the maintainer's GDPR
+  processor/controller responsibility across every event using it. Recorded
+  here so a future session doesn't have to rediscover this reasoning from
+  scratch.
+- **Ticket tiers are informational only, no payment processing.**
+  `ticketTiers` (added modeling a reference festival's Google Form) captures
+  which tier a player intends to buy per pick — it does not charge anyone,
+  check inventory, or enforce the reference form's own rule that
+  Social-ticket availability is capped by how many Support tickets were
+  bought. If a real event needs that, it's a manual reconciliation the
+  organiser does from submitted data, same as capacity (`players`, above) —
+  not logic this form implements.
+- **The tag/trigger vocabulary is a hand-curated unification, not a raw
+  import or a guess.** `larps.json`'s `preferenceTags` (32) and
+  `triggerGroups` (11 groups, 77 triggers) were built together with the
+  organiser from Krak-ON's actual 2026 programme data, not guessed from
+  titles. The generation script and full raw→final mapping are checked in
+  at `.scratch/tag-trigger-unification/` as a reference for redoing this
+  process for a future event's programme — see that folder's own README for
+  why it won't just re-run against new data as-is. Specific past decisions
+  live in `git log`, not here.
+- **Character-preference and marketing-consent state is a folksonomy risk in
+  miniature, but small enough not to need the tag-unification treatment
+  above.** `characterPreferences` stayed a flat 3-item list; no unification
+  was needed at this scale.
+- **A player-facing warning can be about the player, or about the larp —
+  worth checking which before building one.** A conditional, personalized
+  warning (like the trigger-conflict flag) only makes sense when the thing
+  being warned about depends on player input. When it's a fixed fact about
+  the larp itself instead — as the language and time badges are (see
+  Matching & display algorithm) — an unconditional badge is the simpler,
+  correct shape, with no new question needed to gate it.
 
-## 8. Extension points (where to make common changes)
+## 12. Extension points (where to make common changes)
 
 | Change | Where |
 |---|---|
@@ -527,50 +750,56 @@ session doesn't have to rediscover them by reading code:
 | Event name, controller contact, rules link, endpoint URL | `config.js` only |
 | Change match % formula or scale bands | `likeliness()` / `likeLabel()` in `app.js` |
 | Change max picks per slot | `MAX_PICKS` in `app.js` |
-| Change submission schema | `collect()` in `app.js` **and** update `SPEC.md` §6 + bump `schemaVersion` |
+| Change submission schema | `collect()` in `app.js` **and** update this doc's Submission payload shape section + bump `schemaVersion` |
 | Change storage backend or add validation | `Code.gs` in the `larpsign-backend` repo |
-| Change the submit request/response contract | keep `submit-outcome.js` here and `buildSubmissionRequest()` in `larpsign-backend`'s `Code.gs` in sync — see §3, and update both repos |
-| Add a results-review/casting tool | a script reading the cloned private submissions repo locally — see §7 |
+| Change the submit request/response contract | keep `submit-outcome.js` here and `buildSubmissionRequest()` in `larpsign-backend`'s `Code.gs` in sync — see the Request/response contract section, and update both repos |
+| Add a results-review/casting tool | a script reading the cloned private submissions repo locally — see the Known gaps section |
 | Visual restyle | `styles.css` (CSS custom properties in `:root` drive the palette) |
 | Rebrand for a different event | replace `assets/krakon-logo.svg` and swap `.masthead`'s background/logo in `index.html`; `styles.css`'s `--accent`/`--navy` already happen to be Krak-ON's real brand colors (pink `#ec398b`, navy), not neutral defaults — pick your own if forking for another event |
 
-## 9. Relationship to `SPEC.md`
+## 13. Non-functional requirements
 
-`SPEC.md` is the contract (data shapes, algorithm, validation rules, GDPR
-requirements) — treat it as the reference when unsure what the *correct*
-behavior is. This file is the reasoning behind that contract and the map of
-what's deliberately not built yet. When you change behavior, update `SPEC.md`;
-when you change *why* something is structured a certain way, update this file.
+- **No build step**: plain HTML/CSS/JS, static-hostable as-is (GitHub
+  Pages). `npm test` (below) runs only during development and ships nothing
+  to the site — `package.json` carries no dependencies.
+- **No backend required to test**: empty `submitEndpoint` degrades
+  gracefully to file download (see the Request/response contract section).
+- **No terminal required to deploy**: both the frontend (fork + GitHub Pages
+  settings, this repo) and the backend (`larpsign-backend`'s `Code.gs`
+  pasted into script.google.com) are set up entirely through web UIs — see
+  the README's Deploy section here and `larpsign-backend`'s own README.
+- **Automated tests, narrowly scoped**: `npm test` in each repo (Node's
+  built-in test runner, no dependencies) covers `interpretSubmitOutcome()`
+  (`submit-outcome.js`, here) and `buildSubmissionRequest()` (`Code.gs`, in
+  `larpsign-backend`) — the two pure functions on either side of the submit
+  contract (see the Request/response contract section) — extracted
+  specifically because the Apps Script migration added real branching logic
+  (consent/JSON validation, error-code mapping). Both repos run this via
+  `.github/workflows/test.yml` on every push/PR. Everything else in the
+  project (rendering, matching, slot selection, the actual live deploy)
+  remains manually verified; see the Known gaps section for what that
+  leaves unaddressed, including why deploy itself is deliberately not
+  automated.
+- **Responsive**: single-column layout collapses preference rows to stacked
+  on ≤560px.
+- **Status messaging**: `#status` is an `aria-live="polite"` region for
+  submit/error feedback.
+- **XSS safety**: all dynamic content interpolated into `innerHTML` is
+  passed through `esc()` (HTML-entity escaping) — applies to larp names,
+  tag labels, trigger strings, and config strings sourced from JSON/config
+  files.
 
-## 10. Current deployment status (read this first when resuming)
+## 14. Deployment status
 
-**Code is complete and tested. Nothing is actually deployed for a real event
-yet.** Concretely, as of the last session:
+This is a live production deployment, serving real sign-ups for Krak-ON
+2026 — not a template or a dev-only instance. `config.js`'s `submitEndpoint`
+and `submitSecret` hold real, live values, and `larps.json` holds Krak-ON's
+actual confirmed 2026 programme.
 
-- Both repos exist, are public, and are pushed to `main`:
-  [`larpsign-frontend`](https://github.com/Gandi24/larpsign-frontend) (this
-  repo — renamed in place from the original `signon`, git history intact) and
-  [`larpsign-backend`](https://github.com/Gandi24/larpsign-backend) (new).
-- CI is green on both (`.github/workflows/test.yml`, `npm test` — 5 tests
-  here, 8 in `larpsign-backend`).
-- GitHub Pages is live and serving this repo's `main`/root at
-  `https://gandi24.github.io/larpsign-frontend/`.
-- **But**: `config.js`'s `submitEndpoint` and `submitSecret` are both still
-  `""` — nobody has created a real Apps Script Web App yet. The live site
-  today only exercises the local-download fallback path (§6, "Empty
-  (local/dev)"), not real submission. `larpsign-backend`'s `Code.gs` still has
-  its placeholder `GH_OWNER = "your-github-username"` / `GH_REPO =
-  "larp-submissions"` — nobody has created a real private submissions repo,
-  minted a PAT, or run through `larpsign-backend`'s deploy walkthrough
-  against a live Google account either.
-- To make it real for an actual event: follow `larpsign-backend`'s README
-  top to bottom (private submissions repo → fine-grained PAT → paste `Code.gs`
-  into script.google.com → `GH_TOKEN` + `SUBMIT_SECRET` Script Properties →
-  deploy → authorize), then paste the resulting URL and secret into this
-  repo's `config.js`, commit, push.
-- `larps.json`'s per-larp `tags`/`triggers` are still the early, partly-
-  inferred draft flagged in its own `_note` (§7) — not yet confirmed by any
-  GM, because there's no real event's programme loaded in yet either.
-- Still purely documented, not built (§7): the results-review/casting tool,
-  and the shared multi-tenant backend with UUID invite codes (the considered
-  fallback if per-organiser self-hosting proves too much friction).
+Forking this for another event means supplying your own credentials (a new
+Apps Script Web App + `SUBMIT_SECRET`, a new private submissions repo, your
+own `config.js` values) — see the README's Deploy section for the
+walkthrough. For current actual values (endpoint, secret, controller
+contact, programme content), read `config.js` and `larps.json` directly
+rather than trusting a status note like this one, which will go stale the
+next time something changes.

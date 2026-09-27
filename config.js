@@ -8,6 +8,12 @@ window.CONFIG = {
   // Tytuł w nagłówku strony.
   eventName: "Zapisy na Krak-ON 2026",
 
+  // Ustaw na false, żeby zablokować formularz przed oficjalnym otwarciem
+  // zapisów — pokaże się wtedy tylko komunikat z submissionsOpenAt zamiast
+  // pól do wypełnienia.
+  submissionsOpen: true,
+  submissionsOpenAt: "1 października",
+
   // Link do strony z pełnymi opisami larpów i harmonogramem wydarzenia.
   // Zostaw "", jeśli nie masz jeszcze takiej strony — formularz pokaże
   // ogólny tekst zamiast linku.

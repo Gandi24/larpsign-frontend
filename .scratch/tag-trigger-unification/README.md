@@ -13,10 +13,10 @@ scannable checklist as-is.
 one of 31 unified `preferenceTags`) and `trig_map()` (raw trigger phrase →
 one or more of 75 unified triggers, organized into the 11 `triggerGroups`
 categories) — built by going through every larp's actual raw tags/triggers
-and agreeing the mapping with the organiser (see `SPEC.md` §3 and
-`DESIGN.md` §7 for what that unification pass actually did: merges,
-splits, and ~20 explicit drops of items judged too narrow/branded to be a
-reusable category).
+and agreeing the mapping with the organiser (see `DESIGN.md`'s data model
+documentation and its known-gaps notes on tag/trigger unification for what
+that unification pass actually did: merges, splits, and ~20 explicit drops
+of items judged too narrow/branded to be a reusable category).
 
 **To reuse for a future event's programme**: don't expect this script to
 just re-run — its dictionaries are specific to this event's raw vocabulary.
